@@ -313,7 +313,7 @@ if page == "Dashboard":
 
     st.markdown(
         """
-        <h1 style='text-align:center;'>📊 Jira Worklog Dashboard</h1>
+        <h1 style='text-align:center;'>📊 Jira Worklog Dashboard  Hello world</h1>
         <p style='text-align:center; color:gray; font-size:16px;'>
             Interactive analytics across issues, time & users
         </p>
