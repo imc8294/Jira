@@ -8,6 +8,7 @@ from dateutil.tz import tzlocal
 from jira_client import JiraClient
 import plotly.express as px
 
+from ai_assistant import render_ai_assistant
 
 
 
@@ -255,6 +256,7 @@ with st.sidebar:
         nav_button("🐞 Issues", "Issues")
         nav_button("📝 Worklogs", "Worklogs")
         nav_button("📈 Reports", "Reports")
+        nav_button("🤖 AI Assistant", "AI Assistant")
 
 
         st.markdown("---")
@@ -787,3 +789,5 @@ elif page == "Reports":
     else:
         st.info("Click **Load Worklogs** to generate the report.")
 
+elif page == "AI Assistant":
+    render_ai_assistant(client,load_all_worklogs)
