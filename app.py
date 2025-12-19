@@ -276,11 +276,66 @@ with st.sidebar:
 # Block app if not logged in
 # -------------------------------------------------
 if not st.session_state.logged_in:
-    st.info("Please login to continue.")
+    # Main Hero Section
+    st.markdown(
+        """
+        <div style="text-align: center; padding: 40px 0px;">
+            <h1 style="font-size: 3rem; color: #1A6173;">🚀 Jira Worklog Manager</h1>
+            <p style="font-size: 1.2rem; color: #555;">
+                The ultimate companion for tracking, managing, and analyzing your Jira productivity.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+ 
+    # Features Grid
+    col1, col2, col3 = st.columns(3)
+ 
+    with col1:
+        st.markdown("### 📊 Dashboards")
+        st.write("Visualize your time spent across different projects and issues with interactive charts.")
+       
+    with col2:
+        st.markdown("### 📝 Easy Logging")
+        st.write("Log work instantly against your assigned Jira issues without the complex Jira UI.")
+       
+    with col3:
+        st.markdown("### 🤖 AI Powered")
+        st.write("Ask our AI Assistant to analyze your work and help whenever stuck !.")
+ 
+    st.markdown("---")
+ 
+    # Call to Action / Instructions
+    c1, c2 = st.columns([2, 1])
+    with c1:
+        st.info("### 🔐 Get Started")
+        st.markdown(
+            """
+            1. Enter your **Jira Base URL** (e.g., `https://your-company.atlassian.net`).
+            2. Provide your **Email used during creation of Jira account**.
+            3. Use a **Jira API Token** (not your password).
+           
+            Use the sidebar on the left to sign in and unlock your dashboard.
+            """
+        )
+   
+    with c2:
+        st.markdown("### 💡 Pro Tip")
+        st.markdown(
+            """
+            <p style="font-size: 20px; font-weight: 500; line-height: 1.5;">
+                You can generate an API token from your Atlassian security settings
+                or use the button in the sidebar to go there directly.
+            </p>
+            """,
+            unsafe_allow_html=True
+        )
+    # Stop the script here so the rest of the app doesn't run
     st.stop()
-
 client: JiraClient = st.session_state.client
 page = st.session_state.page
+
 
 # -------------------------------------------------
 # Common loader
