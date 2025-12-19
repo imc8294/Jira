@@ -703,8 +703,8 @@ elif page == "Reports":
         # ---------- GRID WITH EDIT & DELETE ----------
 
         grid_df = filtered_df.copy()
-        grid_df["Edit"] = False
-        grid_df["Delete"] = False
+        # grid_df["Edit"] = False
+        # grid_df["Delete"] = False
 
         display_df = grid_df.drop(columns=["worklog_id", "issue_key"])
 
@@ -712,80 +712,80 @@ elif page == "Reports":
             display_df,
             hide_index=True,
             use_container_width=True,
-            column_config={
-                "Edit": st.column_config.CheckboxColumn("✏️ Edit"),
-                "Delete": st.column_config.CheckboxColumn("🗑️ Delete"),
-            },
+            # column_config={
+            #     "Edit": st.column_config.CheckboxColumn("✏️ Edit"),
+            #     "Delete": st.column_config.CheckboxColumn("🗑️ Delete"),
+            # },
             key="worklog_grid"
         )
 
-        # ---------- EDIT ----------
-        edit_rows = edited_df[edited_df["Edit"] == True]
+    #     # ---------- EDIT ----------
+    #     edit_rows = edited_df[edited_df["Edit"] == True]
 
-        if len(edit_rows) == 1:
-            row = edit_rows.iloc[0]
-            original = grid_df.loc[row.name]
+    #     if len(edit_rows) == 1:
+    #         row = edit_rows.iloc[0]
+    #         original = grid_df.loc[row.name]
 
-            st.markdown("### ✏️ Edit Worklog")
+    #         st.markdown("### ✏️ Edit Worklog")
 
-            new_hours = st.number_input(
-                "Hours",
-                value=float(original["Hours"]),
-                step=0.25
-            )
+    #         new_hours = st.number_input(
+    #             "Hours",
+    #             value=float(original["Hours"]),
+    #             step=0.25
+    #         )
 
-            new_comment = st.text_area(
-                "Comment",
-                value=original["Comment"]
-            )
+    #         new_comment = st.text_area(
+    #             "Comment",
+    #             value=original["Comment"]
+    #         )
 
-            if st.button("💾 Save Changes"):
-                client.update_worklog(
-                    original["issue_key"],
-                    original["worklog_id"],
-                    new_hours,
-                    new_comment
-                )
-                st.success("✅ Worklog updated successfully")
-                st.session_state.report_df = pd.DataFrame()
-                st.rerun()
+    #         if st.button("💾 Save Changes"):
+    #             client.update_worklog(
+    #                 original["issue_key"],
+    #                 original["worklog_id"],
+    #                 new_hours,
+    #                 new_comment
+    #             )
+    #             st.success("✅ Worklog updated successfully")
+    #             st.session_state.report_df = pd.DataFrame()
+    #             st.rerun()
 
-        elif len(edit_rows) > 1:
-            st.warning("⚠️ Please select only one row to edit.")
+    #     elif len(edit_rows) > 1:
+    #         st.warning("⚠️ Please select only one row to edit.")
 
-        # ---------- DELETE ----------
-        # ---------- DELETE ----------
-        delete_rows = edited_df[edited_df["Delete"] == True]
+    #     # ---------- DELETE ----------
+    #     # ---------- DELETE ----------
+    #     delete_rows = edited_df[edited_df["Delete"] == True]
 
-        if len(delete_rows) == 1:
-            row = delete_rows.iloc[0]
-            original = grid_df.loc[row.name]
+    #     if len(delete_rows) == 1:
+    #         row = delete_rows.iloc[0]
+    #         original = grid_df.loc[row.name]
 
-            st.markdown("### 🗑️ Delete Worklog")
-            st.warning("⚠️ Are you sure you want to delete this worklog?")
+    #         st.markdown("### 🗑️ Delete Worklog")
+    #         st.warning("⚠️ Are you sure you want to delete this worklog?")
 
-            col_yes, col_no = st.columns(2)
+    #         col_yes, col_no = st.columns(2)
 
-            with col_yes:
-                if st.button("✅ Yes, Confirm"):
-                    client.delete_worklog(
-                        original["issue_key"],
-                        original["worklog_id"]
-                    )
-                    st.success("🗑️ Worklog deleted successfully")
-                    st.session_state.report_df = pd.DataFrame()
-                    st.rerun()
+    #         with col_yes:
+    #             if st.button("✅ Yes, Confirm"):
+    #                 client.delete_worklog(
+    #                     original["issue_key"],
+    #                     original["worklog_id"]
+    #                 )
+    #                 st.success("🗑️ Worklog deleted successfully")
+    #                 st.session_state.report_df = pd.DataFrame()
+    #                 st.rerun()
 
-            with col_no:
-                if st.button("❌ No"):
-                    # Reset delete checkbox state
-                    st.session_state["worklog_grid"]["edited_rows"] = {}
-                    st.info("Deletion cancelled")
-                    st.rerun()
+    #         with col_no:
+    #             if st.button("❌ No"):
+    #                 # Reset delete checkbox state
+    #                 st.session_state["worklog_grid"]["edited_rows"] = {}
+    #                 st.info("Deletion cancelled")
+    #                 st.rerun()
 
 
-        elif len(delete_rows) > 1:
-            st.warning("⚠️ Please select only one row to delete.")
+    #     elif len(delete_rows) > 1:
+    #         st.warning("⚠️ Please select only one row to delete.")
     else:
         st.info("Click **Load Worklogs** to generate the report.")
 
