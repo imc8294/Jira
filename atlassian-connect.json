@@ -1,10 +1,10 @@
 {
-  "key": "my-webapp-plugin",
+  "key": "com.innodata.dashboard.aishwarya",
   "name": "My WebApp Plugin",
-  "baseUrl": "https://innodatajiradashboard.streamlit.app/",
+  "baseUrl": "https://innodatajiradashboard.streamlit.app",
   "vendor": {
-    "name": "Innodata",
-    "url": "https://innodatajiradashboard.streamlit.app/"
+    "name": "aishwaryapandey2609",
+    "url": "https://github.com/imc8294/Jira.git"
   },
   "authentication": {
     "type": "none"
@@ -17,11 +17,11 @@
         "name": {
           "value": "My WebApp"
         },
-        "url": "/",
+        "url": "/?embed=true",
         "icon": {
           "width": 32,
           "height": 32,
-          "url": "https://innodatajiradashboard.streamlit.app/icon.png"
+          "url": "/icon.png"
         }
       }
     ]
