@@ -160,27 +160,27 @@ with st.sidebar:
 
 
         # --------------- Generate Token Link (NEW) ---------------
-        st.markdown(
-            """
-            <a href="https://id.atlassian.com/manage-profile/security/api-tokens"
-            target="_blank"
-            style="
-                display: block;
-                margin-top: 6px;
-                margin-bottom: 12px;
-                padding: 8px 12px;
-                background-color: #1A6173;
-                color: white;
-                text-align: center;
-                border-radius: 6px;
-                text-decoration: none;
-                font-weight: 600;
-            ">
-            🔑 Generate Jira API Token
-            </a>
-            """,
-            unsafe_allow_html=True
-        )
+        # st.markdown(
+        #     """
+        #     <a href="https://id.atlassian.com/manage-profile/security/api-tokens"
+        #     target="_blank"
+        #     style="
+        #         display: block;
+        #         margin-top: 6px;
+        #         margin-bottom: 12px;
+        #         padding: 8px 12px;
+        #         background-color: #1A6173;
+        #         color: white;
+        #         text-align: center;
+        #         border-radius: 6px;
+        #         text-decoration: none;
+        #         font-weight: 600;
+        #     ">
+        #     🔑 Generate Jira API Token
+        #     </a>
+        #     """,
+        #     unsafe_allow_html=True
+        # )
 
         login_clicked = st.button("Login", key="login_btn", use_container_width=True)
 
