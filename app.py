@@ -326,8 +326,29 @@ if not st.session_state.logged_in:
             """
             <p style="font-size: 20px; font-weight: 500; line-height: 1.5;">
                 You can generate an API token from your Atlassian security settings
-                or use the button in the sidebar to go there directly.
+                or just click below button.
             </p>
+            """,
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            """
+            <a href="https://id.atlassian.com/manage-profile/security/api-tokens"
+            target="_blank"
+            style="
+                display: block;
+                margin-top: 6px;
+                margin-bottom: 12px;
+                padding: 8px 12px;
+                background-color: #1A6173;
+                color: white;
+                text-align: center;
+                border-radius: 6px;
+                text-decoration: none;
+                font-weight: 600;
+            ">
+            🔑 Generate Jira API Token
+            </a>
             """,
             unsafe_allow_html=True
         )
@@ -679,7 +700,8 @@ elif page == "Reports":
                         "Start Time": wl["started"][11:16],
                         "Hours": round(wl["timeSpentSeconds"] / 3600, 2),
                         "Comment": extract_comment(wl.get("comment")),
-                        "Author": wl["author"]["displayName"]
+                        "Author": wl["author"]["displayName"],
+                         "User ID": wl["author"].get("accountId", "N/A")
                     })
 
             if rows:
