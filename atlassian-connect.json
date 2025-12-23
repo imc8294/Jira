@@ -1,32 +1,16 @@
 {
 
-  "key": "com.innodata.dashboard.test.v2",
+  "key": "streamlit-jira-remote-app",
 
-  "name": "Innodata Dashboard Test",
+  "name": "Streamlit Jira App",
 
-  "description": "Minimal test app",
+  "description": "Streamlit app embedded inside Jira",
 
   "baseUrl": "https://innodatajiradashboard.streamlit.app",
-
-  "vendor": {
-
-    "name": "Innodata",
-
-    "url": "https://github.com/imc8294/Jira"
-
-  },
 
   "authentication": {
 
     "type": "none"
-
-  },
-
-  "lifecycle": {
-
-    "installed": "/installed",
-
-    "uninstalled": "/uninstalled"
 
   },
 
@@ -42,13 +26,13 @@
 
       {
 
-        "key": "innodata-test-page",
+        "key": "streamlit-main-page",
 
-        "location": "system.admin/globalsettings",
+        "location": "system.top.navigation.bar",
 
         "name": {
 
-          "value": "abc"
+          "value": "Streamlit App"
 
         },
 
@@ -58,7 +42,18 @@
 
     ]
 
-  }
+  },
+
+  "vendor": {
+
+    "name": "Innodata",
+
+    "url": "https://github.com/imc8294"
+
+  },
+
+  "apiVersion": 1
 
 }
+
  
