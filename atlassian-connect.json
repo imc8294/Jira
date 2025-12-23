@@ -1,29 +1,27 @@
 {
-  "key": "com.innodata.dashboard.aishwarya",
-  "name": "My WebApp Plugin",
+  "key": "my-webapp-plugin",
+  "name": "My App Plugin",
   "baseUrl": "https://innodatajiradashboard.streamlit.app",
   "vendor": {
-    "name": "aishwaryapandey2609",
-    "url": "https://github.com/imc8294/Jira.git"
+    "name": "Innodata",
+    "url": "https://innodatajiradashboard.streamlit.app"
   },
   "authentication": {
     "type": "none"
   },
+  "scopes": ["read", "write"],
   "modules": {
     "generalPages": [
       {
         "key": "dashboard-page",
         "location": "system.top.navigation.bar",
         "name": {
-          "value": "My WebApp"
+          "value": "Innodata Dashboard"
         },
-        "url": "/?embed=true",
-        "icon": {
-          "width": 32,
-          "height": 32,
-          "url": "/icon.png"
-        }
+        "url": "/?jira=true"
       }
     ]
   }
 }
+ 
+ 
