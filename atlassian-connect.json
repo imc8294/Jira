@@ -1,12 +1,12 @@
 {
 
-  "key": "com.innodata.dashboard.aishwarya.v1",
+  "key": "com.innodata.dashboard.test.v2",
 
-  "name": "Innodata Dashboard",
+  "name": "Innodata Dashboard Test",
 
-  "description": "A dashboard to view Jira reports and analytics",
+  "description": "Minimal test app",
 
-  "baseUrl": "https://innodatajiradashboard.streamlit.app/",
+  "baseUrl": "https://innodatajiradashboard.streamlit.app",
 
   "vendor": {
 
@@ -34,17 +34,17 @@
 
       {
 
-        "key": "innodata-main-page",
+        "key": "innodata-test-page",
 
-        "location": "system.admin/globalsettings",
+        "location": "system.top.navigation.bar",
 
         "name": {
 
-          "value": "Innodata Reports"
+          "value": "Innodata Test"
 
         },
 
-        "url": "/?embed=true"
+        "url": "/"
 
       }
 
