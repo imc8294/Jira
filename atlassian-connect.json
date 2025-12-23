@@ -1,25 +1,29 @@
 {
-  "key": "innodata-streamlit-dashboard-001",
-  "name": "Innodata Streamlit Dashboard",
+  "key": "com.innodata.dashboard.aishwarya.v1",
+  "name": "Innodata Dashboard",
   "baseUrl": "https://innodatajiradashboard.streamlit.app",
   "vendor": {
     "name": "Innodata",
-    "url": "https://innodatajiradashboard.streamlit.app"
+    "url": "https://github.com/imc8294/Jira.git"
   },
   "authentication": {
     "type": "none"
   },
-  "scopes": ["read"],
+  "scopes": [
+    "READ",
+    "WRITE"
+  ],
   "modules": {
     "generalPages": [
       {
-        "key": "dashboard-page",
+        "key": "innodata-main-page",
         "location": "system.top.navigation.bar",
         "name": {
           "value": "Innodata Dashboard"
         },
-        "url": "/?jira=true"
+        "url": "/?embed=true"
       }
     ]
   }
 }
+ 
