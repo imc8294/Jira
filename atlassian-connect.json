@@ -1,6 +1,6 @@
 {
-  "key": "my-webapp-plugin",
-  "name": "My App Plugin",
+  "key": "innodata-streamlit-dashboard-001",
+  "name": "Innodata Streamlit Dashboard",
   "baseUrl": "https://innodatajiradashboard.streamlit.app",
   "vendor": {
     "name": "Innodata",
@@ -9,7 +9,7 @@
   "authentication": {
     "type": "none"
   },
-  "scopes": ["read", "write"],
+  "scopes": ["read"],
   "modules": {
     "generalPages": [
       {
@@ -23,5 +23,3 @@
     ]
   }
 }
- 
- 
