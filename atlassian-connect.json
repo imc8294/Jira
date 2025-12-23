@@ -1,57 +1,29 @@
 {
-
-  "key": "com.innodata.dashboard.test.v2",
-
-  "name": "Innodata Dashboard Test",
-
-  "description": "Minimal test app",
-
+  "apiVersion": 1,
+  "key": "com.innodata.dashboard.nonauth.v1",
+  "name": "Innodata Dashboard",
+  "description": "Read-only Jira dashboard",
   "baseUrl": "https://innodatajiradashboard.streamlit.app",
-
   "vendor": {
-
     "name": "Innodata",
-
     "url": "https://github.com/imc8294/Jira"
-
   },
-
   "authentication": {
-
     "type": "none"
-
   },
-
   "scopes": [
-
     "READ"
-
   ],
-
   "modules": {
-
     "generalPages": [
-
       {
-
-        "key": "innodata-test-page",
-
+        "key": "innodata-test2",
         "location": "system.top.navigation.bar",
-
         "name": {
-
-          "value": "Innodata Test"
-
+          "value": "Innodata Reports"
         },
-
-        "url": "/"
-
+        "url": "/?embed=true"
       }
-
     ]
-
   }
-
 }
-
- 
