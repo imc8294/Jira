@@ -19,7 +19,7 @@
         "key": "innodata-main-page",
         "location": "system.top.navigation.bar",
         "name": {
-          "value": "Innodata Dashboard"
+          "value": "Innodata Reports"
         },
         "url": "/?embed=true"
       }
