@@ -1,25 +1,25 @@
-# Use official Python base image
+# # Use official Python base image
 
-FROM python:3.11-slim
+# FROM python:3.11-slim
  
-# Set working directory
+# # Set working directory
 
-WORKDIR /app
+# WORKDIR /app
  
-# Copy all files into container
+# # Copy all files into container
 
-COPY . /app
+# COPY . /app
  
-# Install dependencies
+# # Install dependencies
 
-RUN pip install --no-cache-dir -r requirements.txt
+# RUN pip install --no-cache-dir -r requirements.txt
  
-# Expose Streamlit port
+# # Expose Streamlit port
 
-EXPOSE 7860
+# EXPOSE 7860
  
-# Command to run Streamlit app
+# # Command to run Streamlit app
 
-CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0", "--server.headless=true"]
+# CMD ["streamlit", "run", "app.py", "--server.port=7860", "--server.address=0.0.0.0", "--server.headless=true"]
 
  
