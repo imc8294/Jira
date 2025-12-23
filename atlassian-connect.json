@@ -12,7 +12,8 @@
         "name": {
           "value": "Innodata Dashboard"
         },
-        "url": "/"
+        "url":"/?embedded=true"
+
       }
     ]
   },
