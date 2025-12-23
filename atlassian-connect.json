@@ -12,7 +12,7 @@
 
     "name": "Innodata",
 
-    "url": "https://github.com/imc8294/Jira.git"
+    "url": "https://github.com/imc8294/Jira"
 
   },
 
@@ -24,19 +24,9 @@
 
   "scopes": [
 
-    "READ",
-
-    "WRITE"
+    "READ"
 
   ],
-
-  "icons": {
-
-    "48": "https://innodatajiradashboard.streamlit.app/icon48.png",
-
-    "128": "https://innodatajiradashboard.streamlit.app/icon128.png"
-
-  },
 
   "modules": {
 
@@ -46,7 +36,7 @@
 
         "key": "innodata-main-page",
 
-        "location": "system.top.navigation.bar",
+        "location": "system.admin/globalsettings",
 
         "name": {
 
