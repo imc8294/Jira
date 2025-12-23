@@ -2,11 +2,11 @@
 
   "key": "com.innodata.dashboard.test.v2",
 
-  "name": "Innodata testing",
+  "name": "Innodata Dashboard Test",
 
   "description": "Minimal test app",
 
-  "baseUrl": "https://innodatajiradashboard.streamlit.app/",
+  "baseUrl": "https://innodatajiradashboard.streamlit.app",
 
   "vendor": {
 
@@ -22,9 +22,17 @@
 
   },
 
+  "lifecycle": {
+
+    "installed": "/installed",
+
+    "uninstalled": "/uninstalled"
+
+  },
+
   "scopes": [
 
-    "READ"
+    "read"
 
   ],
 
@@ -40,7 +48,7 @@
 
         "name": {
 
-          "value": "Innodata testing"
+          "value": "abc"
 
         },
 
@@ -53,5 +61,4 @@
   }
 
 }
-
  
