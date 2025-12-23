@@ -1,24 +1,67 @@
 {
+
   "key": "com.innodata.dashboard.aishwarya.v1",
+
   "name": "Innodata Dashboard",
-  "baseUrl": "https://innodata-jira-connect.onrender.com",
+
+  "description": "A dashboard to view Jira reports and analytics",
+
+  "baseUrl": "https://innodatajiradashboard.streamlit.app/",
+
   "vendor": {
+
     "name": "Innodata",
-    "url": "https://innodata.com"
+
+    "url": "https://github.com/imc8294/Jira.git"
+
   },
+
   "authentication": {
-    "type": "jwt"
+
+    "type": "none"
+
   },
-  "scopes": ["READ", "WRITE"],
+
+  "scopes": [
+
+    "READ",
+
+    "WRITE"
+
+  ],
+
+  "icons": {
+
+    "48": "https://innodatajiradashboard.streamlit.app/icon48.png",
+
+    "128": "https://innodatajiradashboard.streamlit.app/icon128.png"
+
+  },
+
   "modules": {
+
     "generalPages": [
+
       {
+
         "key": "innodata-main-page",
+
+        "location": "system.top.navigation.bar",
+
         "name": {
+
           "value": "Innodata Reports"
+
         },
-        "url": "/dashboard"
+
+        "url": "/?embed=true"
+
       }
+
     ]
+
   }
+
 }
+
+ 
