@@ -1,3 +1,12 @@
 [server]
+
+# 1. Allows Jira to embed your app
+
+frameAncestors = ["https://*.atlassian.net"]
+ 
+# 2. Prevents connection errors inside the iframe
+
 enableCORS = false
+
 enableXsrfProtection = false
+ 
