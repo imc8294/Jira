@@ -10,6 +10,10 @@ import plotly.express as px
 
 from ai_assistant import render_ai_assistant
 
+st.set_page_config(
+    page_title="Innodata Jira Dashboard",
+    layout="wide"
+)
 
 
 if "report_df" not in st.session_state:
