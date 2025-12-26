@@ -105,14 +105,9 @@ if "selected_worklog_id" not in st.session_state:
 # -------------------------------------------------
 # Auto-login from URL (persist after refresh)
 # -------------------------------------------------
- 
-# ... (rest of your imports)
- 
 # -------------------------------------------------
 # JWT Auto-login Logic
 # -------------------------------------------------
-
- 
 # -------------------------------------------------
 # JWT Auto-login Logic (Forge / Jira Connect)
 # -------------------------------------------------
@@ -288,7 +283,25 @@ with st.sidebar:
  
         # ---------------- Logout ----------------
         if st.button("🚪 Logout", key="logout_btn", use_container_width=True):
-            st.query_params.clear()
+            if st.button("🚪 Logout", use_container_width=True):
+ 
+                # Clear session state
+                for k in list(st.session_state.keys()):
+                    del st.session_state[k]
+ 
+                # Redirect using JS (safe way)
+                st.markdown(
+                    """
+                    <script>
+                        const url = new URL(window.location);
+                        url.search = "";
+                        window.location.href = url.toString();
+                    </script>
+                    """,
+                    unsafe_allow_html=True
+                )
+ 
+                st.stop()
  
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
