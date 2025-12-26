@@ -22,7 +22,6 @@ if "report_df" not in st.session_state:
 # Page config
 # -------------------------------------------------
  
-st.set_page_config(page_title="Jira Worklog App", layout="wide")
  
  
 def load_image_base64(path):
@@ -112,42 +111,43 @@ if "selected_worklog_id" not in st.session_state:
 # -------------------------------------------------
 # JWT Auto-login Logic
 # -------------------------------------------------
-params = st.query_params
+
  
-if not st.session_state.logged_in and "jwt" in params:
+# -------------------------------------------------
+# JWT Auto-login Logic (Forge / Jira Connect)
+# -------------------------------------------------
+params = st.experimental_get_query_params()
+ 
+if not st.session_state.get("logged_in") and "jwt" in params:
     try:
-        # 1. Get the JWT from Jira's request
-        token = params["jwt"]
-       
-        # 2. Decode the token
-        # Note: In a production App, use your 'sharedSecret' to verify:
-        # jwt.decode(token, shared_secret, algorithms=["HS256"], audience=client_key)
+        # 1️⃣ Get the JWT token from query params
+        token = params["jwt"][0]  # query params are lists
+ 
+        # 2️⃣ Decode the JWT (optional verification can be added)
         decoded = jwt.decode(token, options={"verify_signature": False})
-       
-        # 3. Extract Jira context
-        # Jira JWTs contain 'iss' (clientKey) and usually 'xdm_e' (Base URL) is in query params
-        base_url = params.get("xdm_e") or decoded.get("iss")
-       
-        if base_url:
-            # For Jira Connect Apps, the 'sub' claim is the Atlassian Account ID
-            account_id = decoded.get("sub")
-           
-            # IMPORTANT: In JWT mode, you don't use Email/API Token.
-            # You use the JWT itself as a Bearer token or App-User auth.
-            # Assuming your JiraClient handles JWT auth:
-            client = JiraClient(base_url, use_jwt=token)
-           
-            # Fetch user details to confirm login
+ 
+        # 3️⃣ Extract Jira context
+        base_url = params.get("xdm_e", [decoded.get("iss")])[0]
+        account_id = decoded.get("sub")
+ 
+        if base_url and account_id:
+            # 4️⃣ Create JiraClient using JWT
+            client = JiraClient(base_url=base_url, jwt_token=token)
+ 
+            # 5️⃣ Verify login by fetching user info
             me = client.get_myself()
  
-            st.session_state.base_url = base_url
+            # 6️⃣ Store in session state
             st.session_state.client = client
+            st.session_state.base_url = base_url
             st.session_state.logged_in = True
             st.session_state.user_name = me.get("displayName", "Jira User")
-            st.rerun()
+            st.session_state.account_id = account_id
+ 
+            st.rerun()  # refresh the page to load dashboard
  
     except Exception as e:
-        st.error(f"JWT Authentication failed: {e}")
+        st.error(f"JWT auto-login failed: {e}")
  
 # -------------------------------------------------
 # Sidebar (Login / Navigation / Logout)
@@ -893,5 +893,3 @@ elif page == "Reports":
  
 elif page == "AI Assistant":
     render_ai_assistant(client,load_all_worklogs)
-
- 
