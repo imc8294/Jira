@@ -120,39 +120,52 @@ if "selected_worklog_id" not in st.session_state:
 # JWT AUTO LOGIN
 # -------------------------------------------------
  
-params = st.experimental_get_query_params()
+# 1. Use modern query_params (st.experimental_get_query_params is deprecated)
+# This returns a dictionary-like object where values are strings, not lists.
+params = st.query_params
  
 if not st.session_state.get("logged_in") and "jwt" in params:
     try:
-        # 1️⃣ Get the JWT token from query params
-        token = params["jwt"][0]  # query params are lists
+        # 2. Extract the token
+        token = params["jwt"]
  
-        # 2️⃣ Decode the JWT (optional verification can be added)
+        # 3. Decode the JWT (ignoring signature as Forge tokens are verified at the gateway)
         decoded = jwt.decode(token, options={"verify_signature": False})
  
-        # 3️⃣ Extract Jira context
-        base_url = params.get("xdm_e", [decoded.get("iss")])[0]
+        # 4. Extract Jira context
+        # xdm_e is the base Jira URL (e.g., https://yourname.atlassian.net)
+        base_url = params.get("xdm_e", decoded.get("iss"))
         account_id = decoded.get("sub")
  
         if base_url and account_id:
-            # 4️⃣ Create JiraClient using JWT
+            # 5. Initialize your custom JiraClient
             client = JiraClient(base_url=base_url, jwt_token=token)
  
-            # 5️⃣ Verify login by fetching user info
+            # 6. Verify user identity with a simple API call
             me = client.get_myself()
  
-            # 6️⃣ Store in session state
+            # 7. Store everything in session state
             st.session_state.client = client
             st.session_state.base_url = base_url
             st.session_state.logged_in = True
             st.session_state.user_name = me.get("displayName", "Jira User")
             st.session_state.account_id = account_id
  
-            st.rerun()  # refresh the page to load dashboard
+            # 🔥 THE FIX: Clear parameters to prevent infinite redirect loops
+            # This removes the ?jwt=... from the browser address bar
+            st.query_params.clear()
+           
+            # 8. Refresh the app to move past the login logic
+            st.rerun()
  
     except Exception as e:
         st.error(f"JWT auto-login failed: {e}")
+        st.stop()
  
+# --- Application Guard ---
+if not st.session_state.get("logged_in"):
+    st.info("👋 Welcome! Please access this dashboard through the Jira Apps menu.")
+    st.stop()
 # -------------------------------------------------
 # 🚫 BLOCK DIRECT ACCESS (MUST BE BEFORE SIDEBAR)
 # -------------------------------------------------
