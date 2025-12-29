@@ -7,13 +7,9 @@ from datetime import datetime, date
 from dateutil.tz import tzlocal
 from jira_client import JiraClient
 import plotly.express as px
-import jwt
+
 from ai_assistant import render_ai_assistant
 
-st.set_page_config(
-    page_title="Innodata Jira Dashboard",
-    layout="wide"
-)
 
 
 if "report_df" not in st.session_state:
@@ -22,6 +18,7 @@ if "report_df" not in st.session_state:
 # Page config
 # -------------------------------------------------
 
+st.set_page_config(page_title="Jira Worklog App", layout="wide")
 
 
 def load_image_base64(path):
@@ -105,105 +102,155 @@ if "selected_worklog_id" not in st.session_state:
 # -------------------------------------------------
 # Auto-login from URL (persist after refresh)
 # -------------------------------------------------
-
-# ... (rest of your imports)
-
-# -------------------------------------------------
-# JWT Auto-login Logic
-# -------------------------------------------------
-
-
-# -------------------------------------------------
-# JWT Auto-login Logic (Forge / Jira Connect)
-# -------------------------------------------------
-# -------------------------------------------------
-# JWT AUTO LOGIN
-# -------------------------------------------------
-
-# 1. Use modern query_params (st.experimental_get_query_params is deprecated)
-# This returns a dictionary-like object where values are strings, not lists.
 params = st.query_params
 
-if not st.session_state.get("logged_in") and "jwt" in params:
+if not st.session_state.logged_in and params.get("logged_in") == "true":
     try:
-        # 2. Extract the token
-        token = params["jwt"]
+        base_url = decode(params["base_url"])
+        email = decode(params["email"])
+        api_token = decode(params["token"])
 
-        # 3. Decode the JWT (ignoring signature as Forge tokens are verified at the gateway)
-        decoded = jwt.decode(token, options={"verify_signature": False})
+        client = JiraClient(base_url, email, api_token)
+        me = client.get_myself()
 
-        # 4. Extract Jira context
-        # xdm_e is the base Jira URL (e.g., https://yourname.atlassian.net)
-        base_url = params.get("xdm_e", decoded.get("iss"))
-        account_id = decoded.get("sub")
+        st.session_state.base_url = base_url
+        st.session_state.email = email
+        st.session_state.api_token = api_token
+        st.session_state.client = client
+        st.session_state.logged_in = True
+        st.session_state.user_name = me["displayName"]
 
-        if base_url and account_id:
-            # 5. Initialize your custom JiraClient
-            client = JiraClient(base_url=base_url, jwt_token=token)
+    except Exception:
+        st.query_params.clear()
 
-            # 6. Verify user identity with a simple API call
-            me = client.get_myself()
-
-            # 7. Store everything in session state
-            st.session_state.client = client
-            st.session_state.base_url = base_url
-            st.session_state.logged_in = True
-            st.session_state.user_name = me.get("displayName", "Jira User")
-            st.session_state.account_id = account_id
-
-            # 🔥 THE FIX: Clear parameters to prevent infinite redirect loops
-            # This removes the ?jwt=... from the browser address bar
-            st.query_params.clear()
-            
-            # 8. Refresh the app to move past the login logic
-            st.rerun() 
-
-    except Exception as e:
-        st.error(f"JWT auto-login failed: {e}")
-        st.stop()
-
-# --- Application Guard ---
-if not st.session_state.get("logged_in"):
-    st.info("👋 Welcome! Please access this dashboard through the Jira Apps menu.")
-    st.stop()
-# -------------------------------------------------
-# 🚫 BLOCK DIRECT ACCESS (MUST BE BEFORE SIDEBAR)
-# -------------------------------------------------
-if not st.session_state.get("logged_in"):
-    st.error("This app must be opened from Jira.")
-    st.stop()
 
 # -------------------------------------------------
-# SIDEBAR
+# Sidebar (Login / Navigation / Logout)
 # -------------------------------------------------
+
 
 with st.sidebar:
     logo_base64 = load_image_base64("assets/company-logo.png")
+
     st.markdown(
-        f"""
-        <div style="display:flex; justify-content:center; align-items:center; margin-top:-30px; padding-bottom:12px;">
-            <img src="data:image/png;base64,{logo_base64}" style="height:52px;" />
-        </div>
-        """,
-        unsafe_allow_html=True
+    f"""
+    <div style="
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        margin-top:-30px;
+        padding-bottom:12px;
+    ">
+        <img src="data:image/png;base64,{logo_base64}" style="height:52px;" />
+    </div>
+    """,
+    unsafe_allow_html=True
     )
+
+
     st.markdown("<br>", unsafe_allow_html=True)
 
-    if st.session_state.get("logged_in"):
-        # Display user info
+with st.sidebar:
+
+    # ---------------- LOGIN ----------------
+    if not st.session_state.logged_in:
+        base_url = st.text_input("Jira Base URL")
+        email = st.text_input("Email")
+        token = st.text_input("API Token", type="password")
+
+
+        # --------------- Generate Token Link (NEW) ---------------
         st.markdown(
-            f"<div style='font-weight:600; padding-bottom:18px;'>👤 {st.session_state.user_name}</div>",
+            """
+            <a href="https://id.atlassian.com/manage-profile/security/api-tokens"
+            target="_blank"
+            style="
+                display: block;
+                margin-top: 6px;
+                margin-bottom: 12px;
+                padding: 8px 12px;
+                background-color: #1A6173;
+                color: white;
+                text-align: center;
+                border-radius: 6px;
+                text-decoration: none;
+                font-weight: 600;
+            ">
+            🔑 Generate Jira API Token
+            </a>
+            """,
             unsafe_allow_html=True
         )
 
-        # Navigation buttons
+        login_clicked = st.button("Login", key="login_btn", use_container_width=True)
+
+
+        if login_clicked:
+
+            try:
+                client = JiraClient(
+                    base_url.strip(),
+                    email.strip(),
+                    token.strip()
+                )
+                me = client.get_myself()
+
+                st.session_state.base_url = base_url
+                st.session_state.email = email
+                st.session_state.api_token = token
+                st.session_state.client = client
+                st.session_state.logged_in = True
+                st.session_state.user_name = me["displayName"]  # ✅ SET
+
+                st.query_params.update({
+                    "logged_in": "true",
+                    "base_url": encode(base_url),
+                    "email": encode(email),
+                    "token": encode(token)
+                })
+
+                st.success(f"Logged in as {me['displayName']}")
+                st.rerun()
+
+            except Exception as e:
+                st.error(f"Login failed: {e}")
+
+    # ---------------- NAVIGATION ----------------
+    else:
+        # ---------------- USER INFO ----------------
+        st.markdown(
+            f"""
+            <div style="font-weight:600; padding-bottom:18px;">
+                👤 {st.session_state.user_name}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+        #st.markdown("### 📌 Navigation")
+
+        # st.markdown(
+        #     """
+        #     <h3 style="text-align: center;top-margin:5px; margin-bottom: 10px;font-size:25px;">
+        #        <u> <b> Navigation</b></u>
+        #     </h3>
+        #     """,
+        #     unsafe_allow_html=True
+        # )
+
+
+        # ---------------- Navigation Buttons ----------------
         def nav_button(label, page_name):
-            if st.session_state.page != page_name:
-                if st.button(label, use_container_width=True):
+            is_active = st.session_state.page == page_name
+
+            if st.button(
+                label,
+                use_container_width=True,
+                type="primary" if is_active else "secondary"
+            ):
+                if st.session_state.page != page_name:
                     st.session_state.page = page_name
                     st.rerun()
-            else:
-                st.button(label, use_container_width=True, disabled=True)
 
         nav_button("📊 Dashboard", "Dashboard")
         nav_button("🐞 Issues", "Issues")
@@ -211,39 +258,29 @@ with st.sidebar:
         nav_button("📈 Reports", "Reports")
         nav_button("🤖 AI Assistant", "AI Assistant")
 
+
         st.markdown("---")
 
-    else:
-        st.error("This app must be opened from Jira.")
-        st.stop()
+        # ---------------- Logout ----------------
+        if st.button("🚪 Logout", key="logout_btn", use_container_width=True):
+            st.query_params.clear()
 
+            for k in list(st.session_state.keys()):
+                del st.session_state[k]
 
-
-        
-
-        # Redirect using JS (safe way)
-        st.markdown(
-            """
-            <script>
-                const url = new URL(window.location);
-                url.search = "";
-                window.location.href = url.toString();
-            </script>
-            """,
-            unsafe_allow_html=True
-        )
-
-        st.stop()
-
-   
+            st.rerun()
 
 
 
 # -------------------------------------------------
+# Block app if not logged in
+# -------------------------------------------------
+if not st.session_state.logged_in:
+    st.info("Please login to continue.")
+    st.stop()
 
 client: JiraClient = st.session_state.client
 page = st.session_state.page
-
 
 # -------------------------------------------------
 # Common loader
@@ -366,7 +403,7 @@ if page == "Dashboard":
     # -------------------------------------------------
     # Aggregations
     # -------------------------------------------------
-    issue_df =  (df.groupby(["Issue", "Author"], as_index=False)["Hours"].sum())
+    issue_df = issue_df = (df.groupby(["Issue", "Author"], as_index=False)["Hours"].sum())
     day_df = (df.groupby(["Date", "Issue"], as_index=False)["Hours"].sum())
     author_df = (df.groupby("Author", as_index=False)["Hours"].sum())
     monthly_df = df.groupby(["Month", "Issue"], as_index=False)["Hours"].sum()
@@ -587,8 +624,7 @@ elif page == "Reports":
                         "Start Time": wl["started"][11:16],
                         "Hours": round(wl["timeSpentSeconds"] / 3600, 2),
                         "Comment": extract_comment(wl.get("comment")),
-                        "Author": wl["author"]["displayName"],
-                         "User ID": wl["author"].get("accountId", "N/A")
+                        "Author": wl["author"]["displayName"]
                     })
 
             if rows:
@@ -667,8 +703,8 @@ elif page == "Reports":
         # ---------- GRID WITH EDIT & DELETE ----------
 
         grid_df = filtered_df.copy()
-        # grid_df["Edit"] = False
-        # grid_df["Delete"] = False
+        grid_df["Edit"] = False
+        grid_df["Delete"] = False
 
         display_df = grid_df.drop(columns=["worklog_id", "issue_key"])
 
@@ -676,80 +712,80 @@ elif page == "Reports":
             display_df,
             hide_index=True,
             use_container_width=True,
-            # column_config={
-            #     "Edit": st.column_config.CheckboxColumn("✏️ Edit"),
-            #     "Delete": st.column_config.CheckboxColumn("🗑️ Delete"),
-            # },
+            column_config={
+                "Edit": st.column_config.CheckboxColumn("✏️ Edit"),
+                "Delete": st.column_config.CheckboxColumn("🗑️ Delete"),
+            },
             key="worklog_grid"
         )
 
-    #     # ---------- EDIT ----------
-    #     edit_rows = edited_df[edited_df["Edit"] == True]
+        # ---------- EDIT ----------
+        edit_rows = edited_df[edited_df["Edit"] == True]
 
-    #     if len(edit_rows) == 1:
-    #         row = edit_rows.iloc[0]
-    #         original = grid_df.loc[row.name]
+        if len(edit_rows) == 1:
+            row = edit_rows.iloc[0]
+            original = grid_df.loc[row.name]
 
-    #         st.markdown("### ✏️ Edit Worklog")
+            st.markdown("### ✏️ Edit Worklog")
 
-    #         new_hours = st.number_input(
-    #             "Hours",
-    #             value=float(original["Hours"]),
-    #             step=0.25
-    #         )
+            new_hours = st.number_input(
+                "Hours",
+                value=float(original["Hours"]),
+                step=0.25
+            )
 
-    #         new_comment = st.text_area(
-    #             "Comment",
-    #             value=original["Comment"]
-    #         )
+            new_comment = st.text_area(
+                "Comment",
+                value=original["Comment"]
+            )
 
-    #         if st.button("💾 Save Changes"):
-    #             client.update_worklog(
-    #                 original["issue_key"],
-    #                 original["worklog_id"],
-    #                 new_hours,
-    #                 new_comment
-    #             )
-    #             st.success("✅ Worklog updated successfully")
-    #             st.session_state.report_df = pd.DataFrame()
-    #             st.rerun()
+            if st.button("💾 Save Changes"):
+                client.update_worklog(
+                    original["issue_key"],
+                    original["worklog_id"],
+                    new_hours,
+                    new_comment
+                )
+                st.success("✅ Worklog updated successfully")
+                st.session_state.report_df = pd.DataFrame()
+                st.rerun()
 
-    #     elif len(edit_rows) > 1:
-    #         st.warning("⚠️ Please select only one row to edit.")
+        elif len(edit_rows) > 1:
+            st.warning("⚠️ Please select only one row to edit.")
 
-    #     # ---------- DELETE ----------
-    #     # ---------- DELETE ----------
-    #     delete_rows = edited_df[edited_df["Delete"] == True]
+        # ---------- DELETE ----------
+        # ---------- DELETE ----------
+        delete_rows = edited_df[edited_df["Delete"] == True]
 
-    #     if len(delete_rows) == 1:
-    #         row = delete_rows.iloc[0]
-    #         original = grid_df.loc[row.name]
+        if len(delete_rows) == 1:
+            row = delete_rows.iloc[0]
+            original = grid_df.loc[row.name]
 
-    #         st.markdown("### 🗑️ Delete Worklog")
-    #         st.warning("⚠️ Are you sure you want to delete this worklog?")
+            st.markdown("### 🗑️ Delete Worklog")
+            st.warning("⚠️ Are you sure you want to delete this worklog?")
 
-    #         col_yes, col_no = st.columns(2)
+            col_yes, col_no = st.columns(2)
 
-    #         with col_yes:
-    #             if st.button("✅ Yes, Confirm"):
-    #                 client.delete_worklog(
-    #                     original["issue_key"],
-    #                     original["worklog_id"]
-    #                 )
-    #                 st.success("🗑️ Worklog deleted successfully")
-    #                 st.session_state.report_df = pd.DataFrame()
-    #                 st.rerun()
+            with col_yes:
+                if st.button("✅ Yes, Confirm"):
+                    client.delete_worklog(
+                        original["issue_key"],
+                        original["worklog_id"]
+                    )
+                    st.success("🗑️ Worklog deleted successfully")
+                    st.session_state.report_df = pd.DataFrame()
+                    st.rerun()
 
-    #         with col_no:
-    #             if st.button("❌ No"):
-    #                 # Reset delete checkbox state
-    #                 st.session_state["worklog_grid"]["edited_rows"] = {}
-    #                 st.info("Deletion cancelled")
-    #                 st.rerun()
+            with col_no:
+                if st.button("❌ No"):
+                    # Reset delete checkbox state
+                    st.session_state["worklog_grid"]["edited_rows"] = {}
+                    st.info("Deletion cancelled")
+                    st.rerun()
 
 
-    #     elif len(delete_rows) > 1:
-    #         st.warning("⚠️ Please select only one row to delete.")
+        elif len(delete_rows) > 1:
+            st.warning("⚠️ Please select only one row to delete.")
     else:
         st.info("Click **Load Worklogs** to generate the report.")
 

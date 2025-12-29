@@ -2,7 +2,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 class JiraClient:
-    def __init__(self, base_url, email, api_token, verify_ssl=True):
+    def __init__(self, base_url, email=None, api_token=None, jwt_token=None, verify_ssl=True):
         self.base_url = base_url.rstrip("/")
         self.verify_ssl = verify_ssl
 
@@ -11,7 +11,28 @@ class JiraClient:
             "Content-Type": "application/json"
         }
 
-        self.auth = HTTPBasicAuth(email, api_token)
+        # Handle JWT vs Basic Auth
+        if jwt_token:
+            # If JWT is provided (Auto-login), set the header
+            self.headers["Authorization"] = f"JWT {jwt_token}"
+            self.auth = None
+        else:
+            # Otherwise use Basic Auth (Manual login)
+            self.auth = HTTPBasicAuth(email, api_token)
+
+    # -----------------------------
+    # Internal request helper
+    # -----------------------------
+    def _request(self, method, url, **kwargs):
+        """Internal helper to handle auth logic for all methods."""
+        kwargs['headers'] = self.headers
+        kwargs['verify'] = self.verify_ssl
+        if self.auth:
+            kwargs['auth'] = self.auth
+        
+        resp = requests.request(method, url, **kwargs)
+        self._raise(resp)
+        return resp
 
     # -----------------------------
     # Internal error handler
@@ -31,13 +52,7 @@ class JiraClient:
     # -----------------------------
     def get_myself(self):
         url = f"{self.base_url}/rest/api/3/myself"
-        resp = requests.get(
-            url,
-            headers=self.headers,
-            auth=self.auth,
-            verify=self.verify_ssl
-        )
-        self._raise(resp)
+        resp = self._request("GET", url)
         return resp.json()
 
     # -----------------------------
@@ -55,14 +70,7 @@ class JiraClient:
             "fields": fields
         }
 
-        resp = requests.post(
-            url,
-            headers=self.headers,
-            auth=self.auth,
-            json=payload,
-            verify=self.verify_ssl
-        )
-        self._raise(resp)
+        resp = self._request("POST", url, json=payload)
         return resp.json().get("issues", [])
 
     # -----------------------------
@@ -83,20 +91,12 @@ class JiraClient:
     # -----------------------------
     def get_projects(self):
         url = f"{self.base_url}/rest/api/3/project/search"
-        resp = requests.get(
-            url,
-            headers=self.headers,
-            auth=self.auth,
-            verify=self.verify_ssl
-        )
-        self._raise(resp)
+        resp = self._request("GET", url)
         return resp.json().get("values", [])
-
 
     # -----------------------------
     # Create issue
     # -----------------------------
-
     def create_issue(self, project_key, summary, description, issue_type, epic_name=None):
         url = f"{self.base_url}/rest/api/3/issue"
 
@@ -118,20 +118,11 @@ class JiraClient:
             }
         }
 
-        # Epic requires Epic Name
         if issue_type == "Epic":
-            fields["customfield_10011"] = epic_name  # Epic Name field
+            fields["customfield_10011"] = epic_name
 
         payload = {"fields": fields}
-
-        resp = requests.post(
-            url,
-            headers=self.headers,
-            auth=self.auth,
-            json=payload,
-            verify=self.verify_ssl
-        )
-        self._raise(resp)
+        resp = self._request("POST", url, json=payload)
         return resp.json()
 
     # -----------------------------
@@ -159,14 +150,7 @@ class JiraClient:
                 ]
             }
 
-        resp = requests.post(
-            url,
-            headers=self.headers,
-            auth=self.auth,
-            json=payload,
-            verify=self.verify_ssl
-        )
-        self._raise(resp)
+        resp = self._request("POST", url, json=payload)
         return resp.json()
 
     # -----------------------------
@@ -184,15 +168,7 @@ class JiraClient:
                 "maxResults": max_results
             }
 
-            resp = requests.get(
-                url,
-                headers=self.headers,
-                auth=self.auth,
-                params=params,
-                verify=self.verify_ssl
-            )
-            self._raise(resp)
-
+            resp = self._request("GET", url, params=params)
             data = resp.json()
             worklogs = data.get("worklogs", [])
             all_worklogs.extend(worklogs)
@@ -203,9 +179,6 @@ class JiraClient:
             start_at += max_results
 
         return all_worklogs
-    
-
-
 
     # -----------------------------
     # Update worklog
@@ -225,12 +198,37 @@ class JiraClient:
             }
         }
 
-        resp = requests.put(url, headers=self.headers, auth=self.auth, json=payload)
-        self._raise(resp)
+        self._request("PUT", url, json=payload)
 
-
+    # -----------------------------
+    # Delete worklog
+    # -----------------------------
     def delete_worklog(self, issue_key, worklog_id):
         url = f"{self.base_url}/rest/api/3/issue/{issue_key}/worklog/{worklog_id}"
-        resp = requests.delete(url, headers=self.headers, auth=self.auth)
-        self._raise(resp)
+        self._request("DELETE", url)
 
+    # -----------------------------
+    # User Properties & ID
+    # -----------------------------
+    def get_my_account_id(self):
+        me = self.get_myself()
+        return me["accountId"]
+
+    def set_user_property(self, user_account_id, key, value):
+        url = f"{self.base_url}/rest/api/3/user/properties/{key}"
+        params = {"accountId": user_account_id}
+        payload = value
+        self._request("PUT", url, json=payload, params=params)
+
+    def get_user_property(self, user_account_id, key):
+        url = f"{self.base_url}/rest/api/3/user/properties/{key}"
+        params = {"accountId": user_account_id}
+
+        # Special handling for 404 in property lookup
+        try:
+            r = self._request("GET", url, params=params)
+            return r.json().get("value")
+        except Exception as e:
+            if "404" in str(e):
+                return None
+            raise e

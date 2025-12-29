@@ -1,0 +1,29 @@
+{
+  "key": "com.innodata.dashboard.aishwarya.v1",
+  "name": "Innodata Dashboard",
+  "baseUrl": "https://innodatajiradashboard.streamlit.app",
+  "vendor": {
+    "name": "Innodata",
+    "url": "https://github.com/imc8294/Jira.git"
+  },
+  "authentication": {
+    "type": "none"
+  },
+  "scopes": [
+    "READ",
+    "WRITE"
+  ],
+  "modules": {
+    "generalPages": [
+      {
+        "key": "innodata-main-page",
+        "location": "system.top.navigation.bar",
+        "name": {
+          "value": "Innodata Reports"
+        },
+        "url": "/?embed=true"
+      }
+    ]
+  }
+}
+ 
