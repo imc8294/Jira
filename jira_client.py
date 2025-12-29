@@ -282,17 +282,27 @@ class JiraClient:
     # Generic issue search
     # -----------------------------
     def search_issues(self, jql, max_results=100, fields=None):
-        url = f"{self.base_url}/rest/api/3/search/jql"
- 
+        """
+        Jira Cloud compliant JQL search
+        """
+        url = f"{self.base_url}/rest/api/3/search/jql"  # ✅ FINAL endpoint
+
         if not fields:
-            fields = ["summary", "project"]
- 
+            fields = [
+                "summary",
+                "project",
+                "issuetype",
+                "assignee",
+                "status",
+                "worklog"
+            ]
+
         payload = {
             "jql": jql,
-            "maxResults": max_results,
+            "maxResults": int(max_results),
             "fields": fields
         }
- 
+
         resp = requests.post(
             url,
             headers=self.headers,
@@ -300,6 +310,7 @@ class JiraClient:
             json=payload,
             verify=self.verify_ssl
         )
+
         self._raise(resp)
         return resp.json().get("issues", [])
  
