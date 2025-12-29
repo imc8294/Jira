@@ -5,14 +5,15 @@ class JiraClient:
     def __init__(self, base_url, email=None, api_token=None, jwt_token=None, verify_ssl=True):
         self.base_url = base_url.rstrip("/")
         self.verify_ssl = verify_ssl
+
         self.headers = {
             "Accept": "application/json",
             "Content-Type": "application/json"
         }
 
-        # Handle JWT (Forge/Auto-login) vs Basic Auth (Manual/Local)
+        # Handle JWT (Forge Remote) vs Basic Auth (Manual)
         if jwt_token:
-            # Forge Remote expects "Bearer"
+            # Forge Remote usually expects "Bearer"
             self.headers["Authorization"] = f"Bearer {jwt_token}"
             self.auth = None
         elif email and api_token:
@@ -20,6 +21,9 @@ class JiraClient:
         else:
             self.auth = None
 
+    # -----------------------------
+    # Internal request helper
+    # -----------------------------
     def _request(self, method, url, **kwargs):
         """Central helper to handle auth and headers for all methods."""
         kwargs['headers'] = self.headers
@@ -62,22 +66,19 @@ class JiraClient:
             jql = "assignee = currentUser() ORDER BY updated DESC"
         return self.search_issues(jql, max_results, fields)
 
-    def create_issue(self, project_key, summary, description, issue_type="Task", epic_name=None):
+    def create_issue(self, project_key, summary, description, issue_type="Task"):
         url = f"{self.base_url}/rest/api/3/issue"
-        fields = {
-            "project": {"key": project_key},
-            "summary": summary,
-            "description": {
-                "type": "doc", "version": 1,
-                "content": [{"type": "paragraph", "content": [{"type": "text", "text": description}]}]
-            },
-            "issuetype": {"name": issue_type}
+        payload = {
+            "fields": {
+                "project": {"key": project_key},
+                "summary": summary,
+                "description": {
+                    "type": "doc", "version": 1,
+                    "content": [{"type": "paragraph", "content": [{"type": "text", "text": description}]}]
+                },
+                "issuetype": {"name": issue_type}
+            }
         }
-        # Support for Epics
-        if issue_type == "Epic" and epic_name:
-            fields["customfield_10011"] = epic_name # Update this ID if your Jira uses a different one
-
-        payload = {"fields": fields}
         return self._request("POST", url, json=payload).json()
 
     # --- PROJECTS ---
@@ -110,18 +111,3 @@ class JiraClient:
                 break
             start_at += max_results
         return all_worklogs
-
-    def update_worklog(self, issue_key, worklog_id, hours, comment):
-        url = f"{self.base_url}/rest/api/3/issue/{issue_key}/worklog/{worklog_id}"
-        payload = {
-            "timeSpentSeconds": int(hours * 3600),
-            "comment": {
-                "type": "doc", "version": 1,
-                "content": [{"type": "paragraph", "content": [{"type": "text", "text": comment}]}]
-            }
-        }
-        return self._request("PUT", url, json=payload)
-
-    def delete_worklog(self, issue_key, worklog_id):
-        url = f"{self.base_url}/rest/api/3/issue/{issue_key}/worklog/{worklog_id}"
-        return self._request("DELETE", url)
