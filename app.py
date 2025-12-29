@@ -9,6 +9,26 @@ from dateutil.tz import tzlocal
 from jira_client import JiraClient
 from ai_assistant import render_ai_assistant
 
+import streamlit as st
+import streamlit.components.v1 as components
+
+def get_jira_context():
+    # This JS snippet calls the Forge Bridge to get project details
+    components.html(
+        """
+        <script src="https://connect-cdn.atl-paas.net/all.js"></script>
+        <script>
+            window.AP.getContext(function(context){
+                const projectKey = context.jira.project.key;
+                window.parent.postMessage({type: 'streamlit:set_project', key: projectKey}, '*');
+            });
+        </script>
+        """,
+        height=0,
+    )
+
+# Use the context in your app
+get_jira_context()
 # -------------------------------------------------
 # 1. Page Configuration
 # -------------------------------------------------
