@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import base64
 import pandas as pd
 import plotly.express as px
@@ -9,37 +10,46 @@ from dateutil.tz import tzlocal
 from jira_client import JiraClient
 from ai_assistant import render_ai_assistant
 
-import streamlit as st
-import streamlit.components.v1 as components
-
+# -------------------------------------------------
+# 1. JIRA CONTEXT BRIDGE (Get Project Key)
+# -------------------------------------------------
 def get_jira_context():
-    # This JS snippet calls the Forge Bridge to get project details
+    # This snippet asks Jira for the current Project Key
     components.html(
         """
         <script src="https://connect-cdn.atl-paas.net/all.js"></script>
         <script>
-            window.AP.getContext(function(context){
-                const projectKey = context.jira.project.key;
-                window.parent.postMessage({type: 'streamlit:set_project', key: projectKey}, '*');
-            });
+            if (window.AP) {
+                window.AP.getContext(function(context){
+                    const projectKey = context.jira.project.key;
+                    // Send to Streamlit URL as a query parameter
+                    const url = new URL(window.location.href);
+                    if (url.searchParams.get("project_key") !== projectKey) {
+                        url.searchParams.set("project_key", projectKey);
+                        window.location.href = url.href;
+                    }
+                });
+            }
         </script>
         """,
         height=0,
     )
 
-# Use the context in your app
+# Run the bridge to get the Project Key
 get_jira_context()
+project_key = st.query_params.get("project_key", "Global")
+
 # -------------------------------------------------
-# 1. Page Configuration
+# 2. Page Configuration
 # -------------------------------------------------
 st.set_page_config(
-    page_title="Innodata Jira Dashboard",
+    page_title=f"Innodata Jira Dashboard - {project_key}",
     page_icon="🚀",
     layout="wide"
 )
 
 # -------------------------------------------------
-# 2. Utility Functions
+# 3. Utility Functions
 # -------------------------------------------------
 def encode(s: str) -> str:
     return base64.urlsafe_b64encode(s.encode()).decode()
@@ -60,6 +70,7 @@ def extract_comment(comment):
 
 def load_all_worklogs(client):
     rows = []
+    # If we have a project key, we could filter here (e.g., client.get_issues(project=project_key))
     issues = client.get_my_issues(max_results=100)
     for issue in issues:
         issue_key = issue["key"]
@@ -77,7 +88,7 @@ def load_all_worklogs(client):
     return pd.DataFrame(rows)
 
 # -------------------------------------------------
-# 3. Session State Initialization
+# 4. Session State Initialization
 # -------------------------------------------------
 defaults = {
     "client": None,
@@ -95,7 +106,7 @@ for k, v in defaults.items():
         st.session_state[k] = v
 
 # -------------------------------------------------
-# 4. Authentication Logic (Forge & Manual)
+# 5. Authentication Logic (Forge Auto-Login)
 # -------------------------------------------------
 headers = st.context.headers
 forge_auth = headers.get("authorization")
@@ -103,8 +114,12 @@ forge_auth = headers.get("authorization")
 # Auto-login via Forge Header
 if not st.session_state.logged_in and forge_auth:
     try:
+        # Extract token from "Bearer <token>"
         jwt_token = forge_auth.split(" ")[1] if " " in forge_auth else forge_auth
-        base_url = st.secrets.get("JIRA_BASE_URL", "")
+        
+        # JIRA_BASE_URL should be in your .streamlit/secrets.toml
+        base_url = st.secrets.get("JIRA_BASE_URL", "https://aishwaryapandey2609.atlassian.net")
+        
         if base_url:
             client = JiraClient(base_url, jwt_token=jwt_token)
             me = client.get_myself()
@@ -118,7 +133,7 @@ if not st.session_state.logged_in and forge_auth:
         st.error(f"Forge Auto-login failed: {e}")
 
 # -------------------------------------------------
-# 5. Conditional UI: Login vs Main App
+# 6. Conditional UI: Login vs Main App
 # -------------------------------------------------
 if not st.session_state.logged_in:
     # --- LANDING PAGE ---
@@ -126,9 +141,10 @@ if not st.session_state.logged_in:
         <div style="text-align: center; padding: 20px;">
             <h1 style="font-size: 3.5rem; color: #1A6173;">🚀 Jira Worklog Manager</h1>
             <p style="font-size: 1.2rem; color: #555;">Track, manage, and analyze your productivity seamlessly.</p>
+            <p style="color: #888;">Project Context: <b>{0}</b></p>
         </div>
         <hr>
-    """, unsafe_allow_html=True)
+    """.format(project_key), unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns(3)
     col1.metric("Visibility", "Interactive Dashboards")
@@ -156,12 +172,13 @@ if not st.session_state.logged_in:
     st.stop()
 
 # -------------------------------------------------
-# 6. Main App Sidebar (Post-Login)
+# 7. Main App Sidebar (Post-Login)
 # -------------------------------------------------
 client = st.session_state.client
 
 with st.sidebar:
     st.markdown(f"### 👤 {st.session_state.user_name}")
+    st.info(f"📍 Project: {project_key}")
     st.divider()
     
     pages = {
@@ -183,12 +200,12 @@ with st.sidebar:
         st.rerun()
 
 # -------------------------------------------------
-# 7. Page Content
+# 8. Page Content
 # -------------------------------------------------
 
 # --- DASHBOARD ---
 if st.session_state.page == "Dashboard":
-    st.title("📊 Performance Dashboard")
+    st.title(f"📊 {project_key} Performance Dashboard")
     
     if st.session_state.all_worklogs is None:
         with st.spinner("Fetching Jira data..."):
@@ -216,7 +233,16 @@ elif st.session_state.page == "Issues":
         st.session_state.projects = client.get_projects()
     
     project_map = {f"{p['name']} ({p['key']})": p["key"] for p in st.session_state.projects}
-    selected_p = st.selectbox("Project", list(project_map.keys()))
+    
+    # Pre-select the current project if we detected it via the bridge
+    default_index = 0
+    if project_key != "Global":
+        for i, (name, key) in enumerate(project_map.items()):
+            if key == project_key:
+                default_index = i
+                break
+
+    selected_p = st.selectbox("Project", list(project_map.keys()), index=default_index)
     itype = st.selectbox("Type", ["Task", "Bug", "Story", "Epic"])
     summary = st.text_input("Summary")
     desc = st.text_area("Description")
