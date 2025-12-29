@@ -22,7 +22,6 @@ if "report_df" not in st.session_state:
 # Page config
 # -------------------------------------------------
 
-st.set_page_config(page_title="Jira Worklog App", layout="wide")
 
 
 def load_image_base64(path):
@@ -102,59 +101,51 @@ if "selected_worklog_id" not in st.session_state:
 
 
 
+# --- Replace the old "Auto-login from URL" block with this ---
 
-# -------------------------------------------------
-# Auto-login from URL (persist after refresh)
-# -------------------------------------------------
-params = st.query_params
+import streamlit as st
+from jira_client import JiraClient
 
-if not st.session_state.logged_in and params.get("logged_in") == "true":
+# Initialize session state keys if they don't exist
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+# 1. Access Forge Headers
+headers = st.context.headers
+# Note: In some environments, headers are lowercase
+forge_auth = headers.get("authorization") 
+
+# 2. Auto-login Logic
+if not st.session_state.logged_in and forge_auth:
     try:
-        base_url = decode(params["base_url"])
-        email = decode(params["email"])
-        api_token = decode(params["token"])
-
-        client = JiraClient(base_url, email, api_token)
+        # Extract JWT from "Bearer <token>"
+        jwt_token = forge_auth.split(" ")[1] if " " in forge_auth else forge_auth
+        
+        base_url = st.secrets["JIRA_BASE_URL"]
+        
+        # Initialize JiraClient with JWT
+        client = JiraClient(base_url, jwt_token=jwt_token)
+        
+        # Verify the token works by calling Jira
         me = client.get_myself()
 
-        st.session_state.base_url = base_url
-        st.session_state.email = email
-        st.session_state.api_token = api_token
+        # Update Session State
         st.session_state.client = client
         st.session_state.logged_in = True
         st.session_state.user_name = me["displayName"]
+        st.session_state.base_url = base_url
+        
+        st.toast(f"Welcome, {me['displayName']}!", icon="👋")
+    except Exception as e:
+        st.error(f"Forge Auto-login failed: {e}")
 
-    except Exception:
-        st.query_params.clear()
+# 3. App Routing
+if st.session_state.logged_in:
+    st.title(f"Dashboard for {st.session_state.user_name}")
+    # Your main app logic here...
+else:
+    st.warning("Please open this app from within a Jira Issue or Dashboard.")
 
-
-# -------------------------------------------------
-# Sidebar (Login / Navigation / Logout)
-# -------------------------------------------------
-
-
-with st.sidebar:
-    logo_base64 = load_image_base64("assets/company-logo.png")
-
-    st.markdown(
-    f"""
-    <div style="
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        margin-top:-30px;
-        padding-bottom:12px;
-    ">
-        <img src="data:image/png;base64,{logo_base64}" style="height:52px;" />
-    </div>
-    """,
-    unsafe_allow_html=True
-    )
-
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-with st.sidebar:
 
     # ---------------- LOGIN ----------------
     if not st.session_state.logged_in:
