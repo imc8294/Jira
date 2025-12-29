@@ -7,7 +7,7 @@ from datetime import datetime, date
 from dateutil.tz import tzlocal
 from jira_client import JiraClient
 import plotly.express as px
-import jwt
+
 from ai_assistant import render_ai_assistant
 
 st.set_page_config(
@@ -101,109 +101,151 @@ if "selected_worklog_id" not in st.session_state:
 
 
 
+# --- Replace the old "Auto-login from URL" block with this ---
 
-# -------------------------------------------------
-# Auto-login from URL (persist after refresh)
-# -------------------------------------------------
+import streamlit as st
+from jira_client import JiraClient
 
-# ... (rest of your imports)
+# Initialize session state keys if they don't exist
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-# -------------------------------------------------
-# JWT Auto-login Logic
-# -------------------------------------------------
+# 1. Access Forge Headers
+headers = st.context.headers
+# Note: In some environments, headers are lowercase
+forge_auth = headers.get("authorization") 
 
-
-# -------------------------------------------------
-# JWT Auto-login Logic (Forge / Jira Connect)
-# -------------------------------------------------
-# -------------------------------------------------
-# JWT AUTO LOGIN
-# -------------------------------------------------
-
-# 1. Use modern query_params (st.experimental_get_query_params is deprecated)
-# This returns a dictionary-like object where values are strings, not lists.
-params = st.query_params
-
-if not st.session_state.get("logged_in") and "jwt" in params:
+# 2. Auto-login Logic
+if not st.session_state.logged_in and forge_auth:
     try:
-        # 2. Extract the token
-        token = params["jwt"]
+        # Extract JWT from "Bearer <token>"
+        jwt_token = forge_auth.split(" ")[1] if " " in forge_auth else forge_auth
+        
+        base_url = st.secrets["JIRA_BASE_URL"]
+        
+        # Initialize JiraClient with JWT
+        client = JiraClient(base_url, jwt_token=jwt_token)
+        
+        # Verify the token works by calling Jira
+        me = client.get_myself()
 
-        # 3. Decode the JWT (ignoring signature as Forge tokens are verified at the gateway)
-        decoded = jwt.decode(token, options={"verify_signature": False})
-
-        # 4. Extract Jira context
-        # xdm_e is the base Jira URL (e.g., https://yourname.atlassian.net)
-        base_url = params.get("xdm_e", decoded.get("iss"))
-        account_id = decoded.get("sub")
-
-        if base_url and account_id:
-            # 5. Initialize your custom JiraClient
-            client = JiraClient(base_url=base_url, jwt_token=token)
-
-            # 6. Verify user identity with a simple API call
-            me = client.get_myself()
-
-            # 7. Store everything in session state
-            st.session_state.client = client
-            st.session_state.base_url = base_url
-            st.session_state.logged_in = True
-            st.session_state.user_name = me.get("displayName", "Jira User")
-            st.session_state.account_id = account_id
-
-            # 🔥 THE FIX: Clear parameters to prevent infinite redirect loops
-            # This removes the ?jwt=... from the browser address bar
-            st.query_params.clear()
-            
-            # 8. Refresh the app to move past the login logic
-            st.rerun() 
-
+        # Update Session State
+        st.session_state.client = client
+        st.session_state.logged_in = True
+        st.session_state.user_name = me["displayName"]
+        st.session_state.base_url = base_url
+        
+        st.toast(f"Welcome, {me['displayName']}!", icon="👋")
     except Exception as e:
-        st.error(f"JWT auto-login failed: {e}")
-        st.stop()
+        st.error(f"Forge Auto-login failed: {e}")
 
-# --- Application Guard ---
-if not st.session_state.get("logged_in"):
-    st.info("👋 Welcome! Please access this dashboard through the Jira Apps menu.")
-    st.stop()
-# -------------------------------------------------
-# 🚫 BLOCK DIRECT ACCESS (MUST BE BEFORE SIDEBAR)
-# -------------------------------------------------
-if not st.session_state.get("logged_in"):
-    st.error("This app must be opened from Jira.")
-    st.stop()
+# 3. App Routing
+if st.session_state.logged_in:
+    st.title(f"Dashboard for {st.session_state.user_name}")
+    # Your main app logic here...
+else:
+    st.warning("Please open this app from within a Jira Issue or Dashboard.")
 
-# -------------------------------------------------
-# SIDEBAR
-# -------------------------------------------------
 
-with st.sidebar:
-    logo_base64 = load_image_base64("assets/company-logo.png")
-    st.markdown(
-        f"""
-        <div style="display:flex; justify-content:center; align-items:center; margin-top:-30px; padding-bottom:12px;">
-            <img src="data:image/png;base64,{logo_base64}" style="height:52px;" />
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    st.markdown("<br>", unsafe_allow_html=True)
+    # ---------------- LOGIN ----------------
+    if not st.session_state.logged_in:
+        base_url = st.text_input("Jira Base URL")
+        email = st.text_input("Email")
+        token = st.text_input("API Token", type="password")
 
-    if st.session_state.get("logged_in"):
-        # Display user info
+
+        # --------------- Generate Token Link (NEW) ---------------
+        # st.markdown(
+        #     """
+        #     <a href="https://id.atlassian.com/manage-profile/security/api-tokens"
+        #     target="_blank"
+        #     style="
+        #         display: block;
+        #         margin-top: 6px;
+        #         margin-bottom: 12px;
+        #         padding: 8px 12px;
+        #         background-color: #1A6173;
+        #         color: white;
+        #         text-align: center;
+        #         border-radius: 6px;
+        #         text-decoration: none;
+        #         font-weight: 600;
+        #     ">
+        #     🔑 Generate Jira API Token
+        #     </a>
+        #     """,
+        #     unsafe_allow_html=True
+        # )
+
+        login_clicked = st.button("Login", key="login_btn", use_container_width=True)
+
+
+        if login_clicked:
+
+            try:
+                client = JiraClient(
+                    base_url.strip(),
+                    email.strip(),
+                    token.strip()
+                )
+                me = client.get_myself()
+
+                st.session_state.base_url = base_url
+                st.session_state.email = email
+                st.session_state.api_token = token
+                st.session_state.client = client
+                st.session_state.logged_in = True
+                st.session_state.user_name = me["displayName"]  # ✅ SET
+
+                st.query_params.update({
+                    "logged_in": "true",
+                    "base_url": encode(base_url),
+                    "email": encode(email),
+                    "token": encode(token)
+                })
+
+                st.success(f"Logged in as {me['displayName']}")
+                st.rerun()
+
+            except Exception as e:
+                st.error(f"Login failed: {e}")
+
+    # ---------------- NAVIGATION ----------------
+    else:
+        # ---------------- USER INFO ----------------
         st.markdown(
-            f"<div style='font-weight:600; padding-bottom:18px;'>👤 {st.session_state.user_name}</div>",
+            f"""
+            <div style="font-weight:600; padding-bottom:18px;">
+                👤 {st.session_state.user_name}
+            </div>
+            """,
             unsafe_allow_html=True
         )
 
-        # Navigation buttons
+        #st.markdown("### 📌 Navigation")
+
+        # st.markdown(
+        #     """
+        #     <h3 style="text-align: center;top-margin:5px; margin-bottom: 10px;font-size:25px;">
+        #        <u> <b> Navigation</b></u>
+        #     </h3>
+        #     """,
+        #     unsafe_allow_html=True
+        # )
+
+
+        # ---------------- Navigation Buttons ----------------
         def nav_button(label, page_name):
-            if st.session_state.page != page_name:
-                if st.button(label, use_container_width=True):
+            is_active = st.session_state.page == page_name
+
+            if st.button(
+                label,
+                use_container_width=True,
+                type="primary" if is_active else "secondary"
+            ):
+                if st.session_state.page != page_name:
                     st.session_state.page = page_name
                     st.rerun()
-            else:
-                st.button(label, use_container_width=True, disabled=True)
 
         nav_button("📊 Dashboard", "Dashboard")
         nav_button("🐞 Issues", "Issues")
@@ -211,36 +253,102 @@ with st.sidebar:
         nav_button("📈 Reports", "Reports")
         nav_button("🤖 AI Assistant", "AI Assistant")
 
+
         st.markdown("---")
 
-    else:
-        st.error("This app must be opened from Jira.")
-        st.stop()
+        # ---------------- Logout ----------------
+        if st.button("🚪 Logout", key="logout_btn", use_container_width=True):
+            st.query_params.clear()
 
+            for k in list(st.session_state.keys()):
+                del st.session_state[k]
 
-
-        
-
-        # Redirect using JS (safe way)
-        st.markdown(
-            """
-            <script>
-                const url = new URL(window.location);
-                url.search = "";
-                window.location.href = url.toString();
-            </script>
-            """,
-            unsafe_allow_html=True
-        )
-
-        st.stop()
-
-   
+            st.rerun()
 
 
 
 # -------------------------------------------------
-
+# Block app if not logged in
+# -------------------------------------------------
+if not st.session_state.logged_in:
+    # Main Hero Section
+    st.markdown(
+        """
+        <div style="text-align: center; padding: 40px 0px;">
+            <h1 style="font-size: 3rem; color: #1A6173;">🚀 Jira Worklog Manager</h1>
+            <p style="font-size: 1.2rem; color: #555;">
+                The ultimate companion for tracking, managing, and analyzing your Jira productivity.
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+ 
+    # Features Grid
+    col1, col2, col3 = st.columns(3)
+ 
+    with col1:
+        st.markdown("### 📊 Dashboards")
+        st.write("Visualize your time spent across different projects and issues with interactive charts.")
+       
+    with col2:
+        st.markdown("### 📝 Easy Logging")
+        st.write("Log work instantly against your assigned Jira issues without the complex Jira UI.")
+       
+    with col3:
+        st.markdown("### 🤖 AI Powered")
+        st.write("Ask our AI Assistant to analyze your work and help whenever stuck !.")
+ 
+    st.markdown("---")
+ 
+    # Call to Action / Instructions
+    c1, c2 = st.columns([2, 1])
+    with c1:
+        st.info("### 🔐 Get Started")
+        st.markdown(
+            """
+            1. Enter your **Jira Base URL** (e.g., `https://your-company.atlassian.net`).
+            2. Provide your **Email used during creation of Jira account**.
+            3. Use a **Jira API Token** (not your password).
+           
+            Use the sidebar on the left to sign in and unlock your dashboard.
+            """
+        )
+   
+    with c2:
+        st.markdown("### 💡 Pro Tip")
+        st.markdown(
+            """
+            <p style="font-size: 20px; font-weight: 500; line-height: 1.5;">
+                You can generate an API token from your Atlassian security settings
+                or just click below button.
+            </p>
+            """,
+            unsafe_allow_html=True
+        )
+        st.markdown(
+            """
+            <a href="https://id.atlassian.com/manage-profile/security/api-tokens"
+            target="_blank"
+            style="
+                display: block;
+                margin-top: 6px;
+                margin-bottom: 12px;
+                padding: 8px 12px;
+                background-color: #1A6173;
+                color: white;
+                text-align: center;
+                border-radius: 6px;
+                text-decoration: none;
+                font-weight: 600;
+            ">
+            🔑 Generate Jira API Token
+            </a>
+            """,
+            unsafe_allow_html=True
+        )
+    # Stop the script here so the rest of the app doesn't run
+    st.stop()
 client: JiraClient = st.session_state.client
 page = st.session_state.page
 
@@ -366,7 +474,7 @@ if page == "Dashboard":
     # -------------------------------------------------
     # Aggregations
     # -------------------------------------------------
-    issue_df =  (df.groupby(["Issue", "Author"], as_index=False)["Hours"].sum())
+    issue_df = issue_df = (df.groupby(["Issue", "Author"], as_index=False)["Hours"].sum())
     day_df = (df.groupby(["Date", "Issue"], as_index=False)["Hours"].sum())
     author_df = (df.groupby("Author", as_index=False)["Hours"].sum())
     monthly_df = df.groupby(["Month", "Issue"], as_index=False)["Hours"].sum()
