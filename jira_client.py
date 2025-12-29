@@ -327,56 +327,56 @@ class JiraClient:
             fields=fields
         )
  
-#     # -----------------------------
-# # Get all projects
-# # -----------------------------
-# def get_projects(self):
-#     url = f"{self.base_url}/rest/api/3/project/search"
-#     resp = requests.get(
-#         url,
-#         headers=self.headers,
-#         auth=self.auth,
-#         verify=self.verify_ssl
-#     )
-#     self._raise(resp)
-#     return resp.json().get("values", [])
+    # -----------------------------
+    # Get all projects
+    # -----------------------------
+    def get_projects(self):
+        url = f"{self.base_url}/rest/api/3/project/search"
+        resp = requests.get(
+            url,
+            headers=self.headers,
+            auth=self.auth,
+            verify=self.verify_ssl
+        )
+        self._raise(resp)
+        return resp.json().get("values", [])
  
  
-# # -----------------------------
-# # Create issue
-# # -----------------------------
-#     def create_issue(self, project_key, summary, description, issue_type="Task"):
-#         url = f"{self.base_url}/rest/api/3/issue"
+# -----------------------------
+# Create issue
+# -----------------------------
+    def create_issue(self, project_key, summary, description, issue_type="Task"):
+        url = f"{self.base_url}/rest/api/3/issue"
  
-#         payload = {
-#             "fields": {
-#                 "project": {"key": project_key},
-#                 "summary": summary,
-#                 "description": {
-#                     "type": "doc",
-#                     "version": 1,
-#                     "content": [
-#                         {
-#                             "type": "paragraph",
-#                             "content": [
-#                                 {"type": "text", "text": description}
-#                             ]
-#                         }
-#                     ]
-#                 },
-#                 "issuetype": {"name": issue_type}
-#             }
-#         }
+        payload = {
+            "fields": {
+                "project": {"key": project_key},
+                "summary": summary,
+                "description": {
+                    "type": "doc",
+                    "version": 1,
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {"type": "text", "text": description}
+                            ]
+                        }
+                    ]
+                },
+                "issuetype": {"name": issue_type}
+            }
+        }
  
-#         resp = requests.post(
-#             url,
-#             headers=self.headers,
-#             auth=self.auth,
-#             json=payload,
-#             verify=self.verify_ssl
-#         )
-#         self._raise(resp)
-#         return resp.json()
+        resp = requests.post(
+            url,
+            headers=self.headers,
+            auth=self.auth,
+            json=payload,
+            verify=self.verify_ssl
+        )
+        self._raise(resp)
+        return resp.json()
  
  
  
