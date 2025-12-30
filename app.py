@@ -50,75 +50,85 @@ def format_started_iso(d, t):
     dt = datetime.combine(d, t)
     return dt.replace(tzinfo=tzlocal()).strftime("%Y-%m-%dT%H:%M:%S.000%z")
 
-def extract_comment(comment):
-    if not comment or not isinstance(comment, dict):
-        return ""
-    texts = []
-    for block in comment.get("content", []):
-        for item in block.get("content", []):
-            if item.get("type") == "text":
-                texts.append(item.get("text", ""))
-    return " ".join(texts)
-
 def load_all_worklogs(client):
     rows = []
-    issues = client.get_my_issues(max_results=200)
-    for issue in issues:
-        issue_key = issue["key"]
-        project = issue["fields"]["project"]["name"]
-        for wl in client.get_worklogs(issue_key):
-            rows.append({
-                "Project": project,
-                "Issue": issue_key,
-                "Date": wl["started"][:10],
-                "Hours": wl["timeSpentSeconds"] / 3600,
-                "Author": wl["author"]["displayName"]
-            })
+    # Using a try-except here because some JQL might fail if scopes are missing
+    try:
+        issues = client.get_my_issues(max_results=200)
+        for issue in issues:
+            issue_key = issue["key"]
+            project = issue["fields"]["project"]["name"]
+            worklogs = client.get_worklogs(issue_key)
+            for wl in worklogs:
+                rows.append({
+                    "Project": project,
+                    "Issue": issue_key,
+                    "Date": wl["started"][:10],
+                    "Hours": wl["timeSpentSeconds"] / 3600,
+                    "Author": wl["author"]["displayName"]
+                })
+    except Exception as e:
+        st.error(f"Error loading worklogs: {e}")
     return pd.DataFrame(rows)
 
 # -------------------------------------------------
-# 4. LOGIN INTERFACE (Shared for all users)
+# 4. LOGIN LOGIC (Manual & Auto)
 # -------------------------------------------------
 def show_login_page():
     st.markdown("""
         <div style="text-align: center; padding: 40px 0px;">
             <h1 style="font-size: 2.5rem; color: #1A6173;">🚀 Jira Worklog Manager</h1>
-            <p style="font-size: 1.1rem; color: #555;">Track, manage, and analyze your productivity.</p>
+            <p style="font-size: 1.1rem; color: #555;">Manual connection required if not accessed via Jira.</p>
         </div>
     """, unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         with st.form("login_form"):
-            st.subheader("🔐 User Login")
+            st.subheader("🔐 Manual Login")
             base_url = st.text_input("Jira Base URL", placeholder="https://company.atlassian.net")
             email = st.text_input("Email Address")
-            token = st.text_input("API Token", type="password", help="Use an Atlassian API Token, not your password.")
+            token = st.text_input("API Token", type="password")
             submit = st.form_submit_button("Sign In", use_container_width=True)
 
             if submit:
-                if not (base_url and email and token):
-                    st.error("Please fill in all fields.")
-                else:
-                    try:
-                        with st.spinner("Authenticating..."):
-                            client = JiraClient(base_url.strip(), email.strip(), token.strip())
-                            me = client.get_myself()
-                            st.session_state.client = client
-                            st.session_state.user_name = me["displayName"]
-                            st.session_state.logged_in = True
-                            st.rerun()
-                    except Exception as e:
-                        st.error(f"Login failed: Incorrect credentials or Jira URL.")
+                try:
+                    client = JiraClient(base_url.strip(), email=email.strip(), api_token=token.strip())
+                    me = client.get_myself()
+                    st.session_state.client = client
+                    st.session_state.user_name = me["displayName"]
+                    st.session_state.logged_in = True
+                    st.rerun()
+                except Exception as e:
+                    st.error("Login failed. Check credentials.")
 
-        st.info("💡 **Pro Tip:** Generate your token [here](https://id.atlassian.com/manage-profile/security/api-tokens).")
-
-# -------------------------------------------------
-# 5. MAIN APPLICATION (The "Inside")
-# -------------------------------------------------
+# --- CHECK FOR FORGE JWT AUTO-LOGIN ---
 if not st.session_state.logged_in:
-    show_login_page()
-else:
+    query_params = st.query_params
+    if "jwt" in query_params:
+        try:
+            # Automatic login using parameters from Option B (Forge Bridge)
+            jwt_token = query_params["jwt"]
+            # Default to a generic URL if not provided by bridge, though bridge should provide it
+            base_url = query_params.get("base_url", "https://innodata.atlassian.net") 
+            
+            client = JiraClient(base_url, jwt_token=jwt_token)
+            me = client.get_myself()
+            
+            st.session_state.client = client
+            st.session_state.user_name = me["displayName"]
+            st.session_state.logged_in = True
+            st.rerun()
+        except Exception as e:
+            # If JWT auto-login fails, we just show the login page
+            show_login_page()
+    else:
+        show_login_page()
+
+# -------------------------------------------------
+# 5. MAIN APPLICATION
+# -------------------------------------------------
+if st.session_state.logged_in:
     client = st.session_state.client
 
     # --- SIDEBAR NAVIGATION ---
@@ -141,7 +151,7 @@ else:
         nav_item("📈 Reports", "Reports")
         nav_item("🤖 AI Assistant", "AI Assistant")
 
-        st.spacer = st.empty()
+        st.divider()
         if st.button("🚪 Logout", use_container_width=True):
             for key in list(st.session_state.keys()): del st.session_state[key]
             st.rerun()
@@ -161,10 +171,8 @@ else:
             st.info("No worklogs found for your account.")
         else:
             df["Date"] = pd.to_datetime(df["Date"])
-            chart_type = st.selectbox("Chart Style", ["Bar", "Line", "Pie"])
-            
-            # Simplified Chart Logic
-            fig = px.bar(df, x="Date", y="Hours", color="Issue", title="Hours Logged per Day")
+            # Visuals
+            fig = px.bar(df, x="Date", y="Hours", color="Issue", title="Daily Effort Distribution")
             st.plotly_chart(fig, use_container_width=True)
             st.dataframe(df, use_container_width=True)
 
@@ -199,10 +207,11 @@ else:
 
     elif page == "Reports":
         st.title("📋 Reports")
-        if st.button("Generate Report"):
+        if st.button("Generate/Refresh Report"):
             st.session_state.report_df = load_all_worklogs(client)
         
         if not st.session_state.report_df.empty:
+            st.download_button("Download CSV", st.session_state.report_df.to_csv(index=False), "report.csv")
             st.dataframe(st.session_state.report_df, use_container_width=True)
 
     elif page == "AI Assistant":
