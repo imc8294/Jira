@@ -35,7 +35,7 @@ def render_ai_assistant(client, load_all_worklogs):
 
         return "\n".join(summary)
 
-    # ---------------- User question ----------------
+    # ---------------- User question ------------------
     question = st.text_input(
         "Ask anything about Jira 👇",
         placeholder=(
