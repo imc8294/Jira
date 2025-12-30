@@ -14,7 +14,6 @@ from ai_assistant import render_ai_assistant
 # 1. JIRA CONTEXT BRIDGE (Get Project Key)
 # -------------------------------------------------
 def get_jira_context():
-    # This snippet asks Jira for the current Project Key
     components.html(
         """
         <script src="https://connect-cdn.atl-paas.net/all.js"></script>
@@ -22,11 +21,13 @@ def get_jira_context():
             if (window.AP) {
                 window.AP.getContext(function(context){
                     const projectKey = context.jira.project.key;
-                    // Send to Streamlit URL as a query parameter
                     const url = new URL(window.location.href);
+                    
+                    // ONLY redirect if the project_key in the URL is different from Jira context
                     if (url.searchParams.get("project_key") !== projectKey) {
                         url.searchParams.set("project_key", projectKey);
-                        window.location.href = url.href;
+                        // Use replace to avoid messiness in browser history
+                        window.location.replace(url.href); 
                     }
                 });
             }
