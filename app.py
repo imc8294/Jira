@@ -38,7 +38,7 @@ def get_jira_context():
 
 # Run the bridge to get the Project Key
 get_jira_context()
-project_key = st.query_params.get("project_key", "Global")
+project_key = st.experimental_get_query_params().get("project_key", ["Global"])[0]
 
 # -------------------------------------------------
 # 2. Page Configuration
@@ -109,29 +109,35 @@ for k, v in defaults.items():
 # -------------------------------------------------
 # 5. Authentication Logic (Forge Auto-Login)
 # -------------------------------------------------
-headers = st.context.headers
-forge_auth = headers.get("authorization")
+import jwt
 
-# Auto-login via Forge Header
-if not st.session_state.logged_in and forge_auth:
+# Get the JWT token from the query parameters
+token = st.experimental_get_query_params().get("token", [None])[0]
+
+# Auto-login via Forge JWT
+if not st.session_state.logged_in and token:
     try:
-        # Extract token from "Bearer <token>"
-        jwt_token = forge_auth.split(" ")[1] if " " in forge_auth else forge_auth
-        
-        # JIRA_BASE_URL should be in your .streamlit/secrets.toml
-        base_url = st.secrets.get("JIRA_BASE_URL", "https://aishwaryapandey2609.atlassian.net")
-        
-        if base_url:
-            client = JiraClient(base_url, jwt_token=jwt_token)
-            me = client.get_myself()
-            st.session_state.update({
-                "client": client,
-                "logged_in": True,
-                "user_name": me["displayName"]
-            })
-            st.rerun()
+        # Decode the JWT using your secret from secrets.toml
+        decoded = jwt.decode(token, st.secrets["JWT_SECRET"], algorithms=["HS256"])
+        account_id = decoded["sub"]  # Forge user ID
+
+        # Create Jira client (pass the JWT token or account_id as needed)
+        base_url = st.secrets["JIRA_BASE_URL"]
+        client = JiraClient(base_url, jwt_token=token)
+
+        # Fetch user info
+        me = client.get_myself()
+
+        st.session_state.update({
+            "client": client,
+            "logged_in": True,
+            "user_name": me["displayName"]
+        })
+
+        st.experimental_rerun()
     except Exception as e:
         st.error(f"Forge Auto-login failed: {e}")
+
 
 # -------------------------------------------------
 # 6. Conditional UI: Login vs Main App
