@@ -670,6 +670,55 @@ st.set_page_config(
 )
 
 
+@st.cache_data(show_spinner="⏳ Fetching worklogs from Jira...", ttl=300)
+def load_worklogs(_client):
+    issues = client.get_my_issues(max_results=200)
+    rows = []
+
+    for issue in issues:
+        for wl in _client.get_worklogs(issue["key"]):
+            rows.append({
+                "worklog_id": wl["id"],
+                "issue_key": issue["key"],
+                "Issue": issue["key"],
+                "Date": wl["started"][:10],
+                "Start Time": wl["started"][11:16],
+                "Hours": round(wl["timeSpentSeconds"] / 3600, 2),
+                "Comment": extract_comment(wl.get("comment")),
+            })
+
+    return rows, issues
+
+
+
+def parse_time_to_hours(value: str) -> float:
+    """
+    Accepts: '2h', '30m', '1h 30m', '1.5h'
+    Returns: hours as float
+    """
+    value = value.lower().strip()
+
+    hours = 0.0
+    minutes = 0.0
+
+    if "h" in value:
+        h_part = value.split("h")[0].strip()
+        hours = float(h_part)
+
+        if "m" in value:
+            m_part = value.split("h")[1].replace("m", "").strip()
+            if m_part:
+                minutes = float(m_part)
+
+    elif "m" in value:
+        minutes = float(value.replace("m", "").strip())
+
+    return round(hours + minutes / 60, 2)
+
+
+
+
+
 if "report_df" not in st.session_state:
     st.session_state.report_df = pd.DataFrame()
 # -------------------------------------------------
@@ -1045,10 +1094,10 @@ if st.session_state.logged_in:
             st.session_state.page = "Dashboard"
             st.rerun()
 
-    with nav2:
-        if st.button("🐞 Issues", type="primary" if page == "Issues" else "secondary"):
-            st.session_state.page = "Issues"
-            st.rerun()
+    # with nav2:
+    #     if st.button("🐞 Issues", type="primary" if page == "Issues" else "secondary"):
+    #         st.session_state.page = "Issues"
+    #         st.rerun()
 
     with nav3:
         if st.button("📝 Worklogs", type="primary" if page == "Worklogs" else "secondary"):
@@ -1346,27 +1395,202 @@ if page == "Dashboard":
 # -------------------------------------------------
 # WORKLOG ENTRY
 # -------------------------------------------------
+
+
 elif page == "Worklogs":
-    st.title("📝 Add Worklogs")
+# CACHE FUNCTION (AT TOP)
+# ADD HELPER FUNTION AT THE TOP
+    # st.title("📝 Worklogs")
 
-    # if st.button("Fetch Issues"):
-    st.session_state.issues = client.get_my_issues()
+    # ---------- LOAD ISSUES ----------
+    #issues = client.get_my_issues(max_results=200)
+    rows, issues = load_worklogs(client)
+    if "worklog_rows" not in st.session_state:
+        st.session_state.worklog_rows = rows
 
-    for issue in st.session_state.issues:
-        key = issue["key"]
-        summary = issue["fields"]["summary"]
 
-        with st.expander(f"{key} — {summary}"):
-            with st.form(f"form_{key}", clear_on_submit=True):
-                d = st.date_input("Date", date.today())
-                t = st.time_input("Start Time")
-                ts = st.text_input("Time Spent", "1h")
-                c = st.text_area("Comment")
+    issue_map = {
+        f"{i['key']} - {i['fields']['summary']}": i["key"]
+        for i in issues
+    }
 
-                if st.form_submit_button("Submit"):
-                    iso = format_started_iso(d, t)
-                    client.add_worklog(key, ts, c, iso)
-                    st.success("Worklog added")
+    # ---------- ADD / UPDATE FORM ----------
+    st.subheader(
+        "✏️ Update Worklog"
+        if st.session_state.edit_worklog is not None
+        else "➕ Add Worklog"
+    )
+
+    selected_issue_label = st.selectbox(
+        "Issue",
+        list(issue_map.keys()),
+        key="wl_issue_select"
+    )
+
+    selected_issue = issue_map[selected_issue_label]
+
+    edit = st.session_state.edit_worklog
+
+    d = st.date_input(
+        "Date",
+        value=pd.to_datetime(edit["Date"]).date() if edit is not None else date.today()
+    )
+
+    t = st.time_input(
+        "Start Time",
+        value=datetime.strptime(edit["Start Time"], "%H:%M").time()
+        if edit is not None else datetime.now().time()
+
+    )
+
+    hours = st.text_input(
+        "Time Spent",
+        value=str(edit["Hours"]) + "h" if edit is not None else "1h"
+    )
+
+    comment = st.text_area(
+        "Comment",
+        value=edit["Comment"] if edit is not None else ""
+    )
+
+    if st.button("🔄 Update" if edit is not None else "✅ Submit"):
+        started = format_started_iso(d, t)
+
+        # ---------- UPDATE WORKLOG ----------
+        if edit is not None:
+            client.update_worklog(
+                edit["issue_key"],
+                edit["worklog_id"],
+                parse_time_to_hours(hours),
+                comment
+            )
+
+            # ---- optimistic local update ----
+            for r in st.session_state.worklog_rows:
+                if r["worklog_id"] == edit["worklog_id"]:
+                    r["Date"] = d.strftime("%Y-%m-%d")
+                    r["Start Time"] = t.strftime("%H:%M")
+                    r["Hours"] = parse_time_to_hours(hours)
+                    r["Comment"] = comment
+                    break
+
+            st.session_state.edit_worklog = None
+            st.success("✅ Worklog updated")
+
+        # ---------- ADD WORKLOG ----------
+        else:
+            client.add_worklog(
+                selected_issue,
+                hours,
+                comment,
+                started
+            )
+
+            # ---- optimistic local insert ----
+            st.session_state.worklog_rows.insert(0, {
+                "worklog_id": f"temp_{datetime.now().timestamp()}",
+                "issue_key": selected_issue,
+                "Issue": selected_issue,
+                "Date": d.strftime("%Y-%m-%d"),
+                "Start Time": t.strftime("%H:%M"),
+                "Hours": parse_time_to_hours(hours),
+                "Comment": comment,
+            })
+
+            st.success("✅ Worklog added")
+
+        st.rerun()
+
+    st.divider()
+
+    # ---------- REPORT GRID ----------
+    st.subheader("📋 Your Worklogs")
+    # with st.spinner("⏳ Fetching worklogs from Jira..."):
+
+    #     rows = []
+    #     for issue in issues:
+    #         for wl in client.get_worklogs(issue["key"]):
+    #             rows.append({
+    #                 "worklog_id": wl["id"],
+    #                 "issue_key": issue["key"],
+    #                 "Issue": issue["key"],
+    #                 "Date": wl["started"][:10],
+    #                 "Start Time": wl["started"][11:16],
+    #                 "Hours": round(wl["timeSpentSeconds"] / 3600, 2),
+    #                 "Comment": extract_comment(wl.get("comment")),
+    #             })
+
+    df = pd.DataFrame(st.session_state.worklog_rows)
+
+    if df.empty:
+        st.info("No worklogs found")
+
+    # ---- table header ----
+    h1, h2, h3, h4, h5, h6, h7 = st.columns([2, 2, 2, 3, 1, 1, 1])
+    h1.markdown("**Issue**")
+    h2.markdown("**Date**")
+    h3.markdown("**Start Time**")
+    h4.markdown("**Comment**")
+    h5.markdown("**Hours**")
+    h6.markdown("**Edit**")
+    h7.markdown("**Delete**")
+
+    st.divider()
+
+    # ---- table rows ----
+    for _, row in df.iterrows():
+        c1, c2, c3, c4, c5, c6, c7 = st.columns([2, 2, 2, 3, 1, 1, 1])
+
+        c1.write(row["Issue"])
+        c2.write(row["Date"])
+        c3.write(row["Start Time"])
+        c4.write(row["Comment"])
+        c5.write(f"{row['Hours']}h")
+
+        # ----- EDIT -----
+        if c6.button("Edit", key=f"edit_{row['worklog_id']}"):
+            st.session_state.edit_worklog = row
+            st.rerun()
+
+        # ----- DELETE -----
+        if c7.button("Delete", key=f"delete_{row['worklog_id']}"):
+            client.delete_worklog(row["issue_key"], row["worklog_id"])
+
+            # ---- optimistic local delete ----
+            st.session_state.worklog_rows = [
+                r for r in st.session_state.worklog_rows
+                if r["worklog_id"] != row["worklog_id"]
+            ]
+
+            st.success("🗑️ Worklog deleted")
+            st.rerun()
+
+
+
+
+
+
+# elif page == "Worklogs":
+#     st.title("📝 Add Worklogs")
+
+#     # if st.button("Fetch Issues"):
+#     st.session_state.issues = client.get_my_issues()
+
+#     for issue in st.session_state.issues:
+#         key = issue["key"]
+#         summary = issue["fields"]["summary"]
+
+#         with st.expander(f"{key} — {summary}"):
+#             with st.form(f"form_{key}", clear_on_submit=True):
+#                 d = st.date_input("Date", date.today())
+#                 t = st.time_input("Start Time")
+#                 ts = st.text_input("Time Spent", "1h")
+#                 c = st.text_area("Comment")
+
+#                 if st.form_submit_button("Submit"):
+#                     iso = format_started_iso(d, t)
+#                     client.add_worklog(key, ts, c, iso)
+#                     st.success("Worklog added")
 
 # -------------------------------------------------
 # REPORTS
