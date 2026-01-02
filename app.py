@@ -1094,10 +1094,10 @@ if st.session_state.logged_in:
             st.session_state.page = "Dashboard"
             st.rerun()
 
-    # with nav2:
-    #     if st.button("🐞 Issues", type="primary" if page == "Issues" else "secondary"):
-    #         st.session_state.page = "Issues"
-    #         st.rerun()
+    with nav2:
+        if st.button("🤖 AI Assistant", type="primary" if page == "AI Assistant" else "secondary"):
+            st.session_state.page = "AI Assistant"
+            st.rerun()
 
     with nav3:
         if st.button("📝 Worklogs", type="primary" if page == "Worklogs" else "secondary"):
