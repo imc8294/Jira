@@ -679,6 +679,16 @@ if "report_df" not in st.session_state:
 st.set_page_config(page_title="Jira Worklog App", layout="wide")
 
 
+if st.session_state.get("logged_in"):
+    st.markdown("""
+        <style>
+            [data-testid="stSidebar"] {
+                display: none;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+
 def load_image_base64(path):
         with open(path, "rb") as f:
             return base64.b64encode(f.read()).decode()
