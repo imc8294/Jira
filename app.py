@@ -554,83 +554,83 @@ if page == "Dashboard":
 # ISSUES
 # ---------------------
 
-if "projects" not in st.session_state:
-    st.session_state.projects = None
+# if "projects" not in st.session_state:
+#     st.session_state.projects = None
 
-elif page == "Issues":
-    st.title("🐞 Create Jira Issue")
-    if "projects" not in st.session_state:
-        st.session_state.projects = None
+# elif page == "Issues":
+#     st.title("🐞 Create Jira Issue")
+#     if "projects" not in st.session_state:
+#         st.session_state.projects = None
 
-    if st.session_state.projects is None:
-        with st.spinner("Loading projects..."):
-            try:
-                st.session_state.projects = client.get_projects()
-            except Exception as e:
-                st.error(f"Failed to load projects: {e}")
-                st.stop()
+#     if st.session_state.projects is None:
+#         with st.spinner("Loading projects..."):
+#             try:
+#                 st.session_state.projects = client.get_projects()
+#             except Exception as e:
+#                 st.error(f"Failed to load projects: {e}")
+#                 st.stop()
 
-    projects = st.session_state.projects
+#     projects = st.session_state.projects
 
 
-    project_map = {
-        f"{p['name']} ({p['key']})": p["key"]
-        for p in projects
-    }
+#     project_map = {
+#         f"{p['name']} ({p['key']})": p["key"]
+#         for p in projects
+#     }
 
-    selected_project = st.selectbox(
-        "Select Project",
-        list(project_map.keys()),
-        key="selected_project"
-    )
+#     selected_project = st.selectbox(
+#         "Select Project",
+#         list(project_map.keys()),
+#         key="selected_project"
+#     )
 
-    # ---------------------------
-    # Issue Type
-    # ---------------------------
-    issue_type = st.selectbox(
-        "Issue Type",
-        ["Task", "Bug", "Story", "Epic"]
-    )
+#     # ---------------------------
+#     # Issue Type
+#     # ---------------------------
+#     issue_type = st.selectbox(
+#         "Issue Type",
+#         ["Task", "Bug", "Story", "Epic"]
+#     )
 
-    # ---------------------------
-    # Common fields
-    # ---------------------------
-    summary = st.text_input("Summary")
-    description = st.text_area("Description")
+#     # ---------------------------
+#     # Common fields
+#     # ---------------------------
+#     summary = st.text_input("Summary")
+#     description = st.text_area("Description")
 
-    # ---------------------------
-    # Conditional fields
-    # ---------------------------
-    epic_name = None
-    if issue_type == "Epic":
-        epic_name = st.text_input("Epic Name (Required)")
+#     # ---------------------------
+#     # Conditional fields
+#     # ---------------------------
+#     epic_name = None
+#     if issue_type == "Epic":
+#         epic_name = st.text_input("Epic Name (Required)")
 
-    # ---------------------------
-    # Create Issue
-    # ---------------------------
-    if st.button("Create Issue"):
-        if not summary:
-            st.warning("Summary is required")
-            st.stop()
+#     # ---------------------------
+#     # Create Issue
+#     # ---------------------------
+#     if st.button("Create Issue"):
+#         if not summary:
+#             st.warning("Summary is required")
+#             st.stop()
 
-        if issue_type == "Epic" and not epic_name:
-            st.warning("Epic Name is required for Epic issues")
-            st.stop()
+#         if issue_type == "Epic" and not epic_name:
+#             st.warning("Epic Name is required for Epic issues")
+#             st.stop()
 
-        with st.spinner("Creating issue..."):
-            try:
-                issue = client.create_issue(
-                    project_key=project_map[selected_project],
-                    summary=summary,
-                    description=description,
-                    issue_type=issue_type,
-                    epic_name=epic_name
-                )
-            except Exception as e:
-                st.error(f"Failed to create issue: {e}")
-                st.stop()
+#         with st.spinner("Creating issue..."):
+#             try:
+#                 issue = client.create_issue(
+#                     project_key=project_map[selected_project],
+#                     summary=summary,
+#                     description=description,
+#                     issue_type=issue_type,
+#                     epic_name=epic_name
+#                 )
+#             except Exception as e:
+#                 st.error(f"Failed to create issue: {e}")
+#                 st.stop()
 
-        st.success(f"✅ Issue created: {issue['key']}")
+#         st.success(f"✅ Issue created: {issue['key']}")
 
 
 
