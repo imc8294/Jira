@@ -874,59 +874,59 @@ with st.sidebar:
                 st.error(f"Login failed: {e}")
 
     # ---------------- NAVIGATION ----------------
-    else:
-        # ---------------- USER INFO ----------------
-        st.markdown(
-            f"""
-            <div style="font-weight:600; padding-bottom:18px;">
-                👤 {st.session_state.user_name}
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+    # else:
+    #     # ---------------- USER INFO ----------------
+    #     st.markdown(
+    #         f"""
+    #         <div style="font-weight:600; padding-bottom:18px;">
+    #             👤 {st.session_state.user_name}
+    #         </div>
+    #         """,
+    #         unsafe_allow_html=True
+    #     )
 
-        #st.markdown("### 📌 Navigation")
+    #     #st.markdown("### 📌 Navigation")
 
-        # st.markdown(
-        #     """
-        #     <h3 style="text-align: center;top-margin:5px; margin-bottom: 10px;font-size:25px;">
-        #        <u> <b> Navigation</b></u>
-        #     </h3>
-        #     """,
-        #     unsafe_allow_html=True
-        # )
-
-
-        # ---------------- Navigation Buttons ----------------
-        def nav_button(label, page_name):
-            is_active = st.session_state.page == page_name
-
-            if st.button(
-                label,
-                use_container_width=True,
-                type="primary" if is_active else "secondary"
-            ):
-                if st.session_state.page != page_name:
-                    st.session_state.page = page_name
-                    st.rerun()
-
-        nav_button("📊 Dashboard", "Dashboard")
-        # nav_button("🐞 Issues", "Issues")
-        nav_button("📝 Worklogs", "Worklogs")
-        nav_button("📈 Reports", "Reports")
-        nav_button("🤖 AI Assistant", "AI Assistant")
+    #     # st.markdown(
+    #     #     """
+    #     #     <h3 style="text-align: center;top-margin:5px; margin-bottom: 10px;font-size:25px;">
+    #     #        <u> <b> Navigation</b></u>
+    #     #     </h3>
+    #     #     """,
+    #     #     unsafe_allow_html=True
+    #     # )
 
 
-        st.markdown("---")
+    #     # ---------------- Navigation Buttons ----------------
+    #     def nav_button(label, page_name):
+    #         is_active = st.session_state.page == page_name
 
-        # ---------------- Logout ----------------
-        if st.button("🚪 Logout", key="logout_btn", use_container_width=True):
-            st.query_params.clear()
+    #         if st.button(
+    #             label,
+    #             use_container_width=True,
+    #             type="primary" if is_active else "secondary"
+    #         ):
+    #             if st.session_state.page != page_name:
+    #                 st.session_state.page = page_name
+    #                 st.rerun()
 
-            for k in list(st.session_state.keys()):
-                del st.session_state[k]
+    #     nav_button("📊 Dashboard", "Dashboard")
+    #     # nav_button("🐞 Issues", "Issues")
+    #     nav_button("📝 Worklogs", "Worklogs")
+    #     nav_button("📈 Reports", "Reports")
+    #     nav_button("🤖 AI Assistant", "AI Assistant")
 
-            st.rerun()
+
+    #     st.markdown("---")
+
+    #     # ---------------- Logout ----------------
+    #     if st.button("🚪 Logout", key="logout_btn", use_container_width=True):
+    #         st.query_params.clear()
+
+    #         for k in list(st.session_state.keys()):
+    #             del st.session_state[k]
+
+    #         st.rerun()
 
 
 
@@ -1014,6 +1014,51 @@ if not st.session_state.logged_in:
     st.stop()
 client: JiraClient = st.session_state.client
 page = st.session_state.page
+
+
+if st.session_state.logged_in:
+
+    st.markdown("""
+        <style>
+            .top-nav button {
+                width: 100%;
+                border-radius: 8px;
+                font-weight: 600;
+            }
+        </style>
+    """, unsafe_allow_html=True)
+
+    nav1, nav2, nav3, nav4, nav5 = st.columns([2, 2, 2, 2, 1])
+
+    with nav1:
+        if st.button("📊 Dashboard", type="primary" if page == "Dashboard" else "secondary"):
+            st.session_state.page = "Dashboard"
+            st.rerun()
+
+    with nav2:
+        if st.button("🐞 Issues", type="primary" if page == "Issues" else "secondary"):
+            st.session_state.page = "Issues"
+            st.rerun()
+
+    with nav3:
+        if st.button("📝 Worklogs", type="primary" if page == "Worklogs" else "secondary"):
+            st.session_state.page = "Worklogs"
+            st.rerun()
+
+    with nav4:
+        if st.button("📈 Reports", type="primary" if page == "Reports" else "secondary"):
+            st.session_state.page = "Reports"
+            st.rerun()
+
+    with nav5:
+        if st.button("🚪 Logout"):
+            st.query_params.clear()
+            for k in list(st.session_state.keys()):
+                del st.session_state[k]
+            st.rerun()
+
+    st.divider()
+
 
 
 # -------------------------------------------------
