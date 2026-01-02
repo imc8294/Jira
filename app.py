@@ -257,7 +257,7 @@ with st.sidebar:
                     st.rerun()
 
         nav_button("📊 Dashboard", "Dashboard")
-        nav_button("🐞 Issues", "Issues")
+        # nav_button("🐞 Issues", "Issues")
         nav_button("📝 Worklogs", "Worklogs")
         nav_button("📈 Reports", "Reports")
         nav_button("🤖 AI Assistant", "AI Assistant")
