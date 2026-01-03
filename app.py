@@ -785,6 +785,79 @@ defaults = {
 
 }
 
+
+# ------------------- REMEMBER ME CODE -------------------
+# -------------
+# --------------------------------------------------------
+
+
+from cryptography.fernet import Fernet
+import json
+import os
+
+
+# -------------------------------------------------
+# Remember Me (Encrypted Storage)
+# -------------------------------------------------
+FERNET_KEY = st.secrets["FERNET_KEY"]  # from Streamlit secrets
+fernet = Fernet(FERNET_KEY)
+
+CRED_FILE = "jira_credentials.enc"
+
+
+def save_credentials(base_url, email, token):
+    data = json.dumps({
+        "base_url": base_url,
+        "email": email,
+        "token": token
+    }).encode()
+    encrypted = fernet.encrypt(data)
+    with open(CRED_FILE, "wb") as f:
+        f.write(encrypted)
+
+
+def load_credentials():
+    if not os.path.exists(CRED_FILE):
+        return None
+    try:
+        with open(CRED_FILE, "rb") as f:
+            decrypted = fernet.decrypt(f.read())
+        return json.loads(decrypted)
+    except Exception:
+        return None
+
+
+def clear_credentials():
+    if os.path.exists(CRED_FILE):
+        os.remove(CRED_FILE)
+
+
+
+# -------------------------------------------------
+# Auto-load remembered credentials
+# -------------------------------------------------
+if not st.session_state.logged_in:
+    saved = load_credentials()
+    if saved:
+        try:
+            client = JiraClient(
+                saved["base_url"],
+                saved["email"],
+                saved["token"]
+            )
+            me = client.get_myself()
+
+            st.session_state.base_url = saved["base_url"]
+            st.session_state.email = saved["email"]
+            st.session_state.api_token = saved["token"]
+            st.session_state.client = client
+            st.session_state.logged_in = True
+            st.session_state.user_name = me["displayName"]
+
+        except Exception:
+            clear_credentials()
+
+
 for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
@@ -815,30 +888,30 @@ if "selected_worklog_id" not in st.session_state:
 
 
 
+# ----- COMMENT FOR REMERBER ME TRIAL -------
 
-# -------------------------------------------------
 # Auto-login from URL (persist after refresh)
 # -------------------------------------------------
-params = st.query_params
+# params = st.query_params
 
-if not st.session_state.logged_in and params.get("logged_in") == "true":
-    try:
-        base_url = decode(params["base_url"])
-        email = decode(params["email"])
-        api_token = decode(params["token"])
+# if not st.session_state.logged_in and params.get("logged_in") == "true":
+#     try:
+#         base_url = decode(params["base_url"])
+#         email = decode(params["email"])
+#         api_token = decode(params["token"])
 
-        client = JiraClient(base_url, email, api_token)
-        me = client.get_myself()
+#         client = JiraClient(base_url, email, api_token)
+#         me = client.get_myself()
 
-        st.session_state.base_url = base_url
-        st.session_state.email = email
-        st.session_state.api_token = api_token
-        st.session_state.client = client
-        st.session_state.logged_in = True
-        st.session_state.user_name = me["displayName"]
+#         st.session_state.base_url = base_url
+#         st.session_state.email = email
+#         st.session_state.api_token = api_token
+#         st.session_state.client = client
+#         st.session_state.logged_in = True
+#         st.session_state.user_name = me["displayName"]
 
-    except Exception:
-        st.query_params.clear()
+#     except Exception:
+#         st.query_params.clear()
 
 
 # -------------------------------------------------
@@ -875,29 +948,8 @@ with st.sidebar:
         email = st.text_input("Email")
         token = st.text_input("API Token", type="password")
 
-
-        # --------------- Generate Token Link (NEW) ---------------
-        # st.markdown(
-        #     """
-        #     <a href="https://id.atlassian.com/manage-profile/security/api-tokens"
-        #     target="_blank"
-        #     style="
-        #         display: block;
-        #         margin-top: 6px;
-        #         margin-bottom: 12px;
-        #         padding: 8px 12px;
-        #         background-color: #1A6173;
-        #         color: white;
-        #         text-align: center;
-        #         border-radius: 6px;
-        #         text-decoration: none;
-        #         font-weight: 600;
-        #     ">
-        #     🔑 Generate Jira API Token
-        #     </a>
-        #     """,
-        #     unsafe_allow_html=True
-        # )
+        #--------Remember Me Checkbox --------
+        remember_me = st.checkbox("🔐 Remember me")
 
         login_clicked = st.button("Login", key="login_btn", use_container_width=True)
 
@@ -919,12 +971,18 @@ with st.sidebar:
                 st.session_state.logged_in = True
                 st.session_state.user_name = me["displayName"]  # ✅ SET
 
-                st.query_params.update({
-                    "logged_in": "true",
-                    "base_url": encode(base_url),
-                    "email": encode(email),
-                    "token": encode(token)
-                })
+
+                # -------- REMEMBER ME CODE --------
+                if remember_me:
+                    save_credentials(base_url, email, token)
+                # -----------------------------------
+
+                # st.query_params.update({
+                #     "logged_in": "true",
+                #     "base_url": encode(base_url),
+                #     "email": encode(email),
+                #     "token": encode(token)
+                # })
 
                 st.success(f"Logged in as {me['displayName']}")
                 st.rerun()
@@ -1110,8 +1168,15 @@ if st.session_state.logged_in:
             st.rerun()
 
     with nav5:
+        # if st.button("🚪 Logout"):
+        #     st.query_params.clear()
+        #     for k in list(st.session_state.keys()):
+        #         del st.session_state[k]
+        #     st.rerun()
+
+        # ----------- REMERBER ME CODE ------------
         if st.button("🚪 Logout"):
-            st.query_params.clear()
+            clear_credentials()
             for k in list(st.session_state.keys()):
                 del st.session_state[k]
             st.rerun()
@@ -1805,3 +1870,4 @@ elif page == "Reports":
 
 elif page == "AI Assistant":
     render_ai_assistant(client,load_all_worklogs)
+
