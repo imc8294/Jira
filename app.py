@@ -1068,12 +1068,24 @@ with st.sidebar:
         if login_clicked:
 
             try:
-                client = JiraClient(
-                    base_url.strip(),
-                    email.strip(),
-                    token.strip()
-                )
+                if not base_url or not email or not token:
+                    st.error("Please fill in all fields")
+                    st.stop()
+
+                base_url = base_url.strip()
+                email = email.strip()
+                token = token.strip()
+
+                # ---- Jira validation ----
+                client = JiraClient(base_url, email, token)
                 me = client.get_myself()
+            
+                # client = JiraClient(
+                #     base_url.strip(),
+                #     email.strip(),
+                #     token.strip()
+                # )
+                # me = client.get_myself()
 
                 st.session_state.base_url = base_url
                 st.session_state.email = email
