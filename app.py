@@ -721,6 +721,42 @@ def parse_time_to_hours(value: str) -> float:
 
 if "report_df" not in st.session_state:
     st.session_state.report_df = pd.DataFrame()
+
+
+#----------------- REMEMBER ME CODE -----------------
+# -------------------------------------------------
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+    remember = st.secrets.get("remember")
+
+    if remember:
+        try:
+            f = Fernet(st.secrets["FERNET_KEY"].encode())
+
+            base_url = f.decrypt(remember["base_url"].encode()).decode()
+            email = f.decrypt(remember["email"].encode()).decode()
+            token = f.decrypt(remember["token"].encode()).decode()
+
+            client = JiraClient(base_url, email, token)
+            me = client.get_myself()
+
+            st.session_state.base_url = base_url
+            st.session_state.email = email
+            st.session_state.api_token = token
+            st.session_state.client = client
+            st.session_state.user_name = me["displayName"]
+            st.session_state.logged_in = True
+
+            st.rerun()
+
+        except Exception:
+            pass
+
+
+
+
 # -------------------------------------------------
 # Page config
 # -------------------------------------------------
@@ -826,6 +862,17 @@ import json
 import os
 
 
+def get_fernet():
+    return Fernet(st.secrets["FERNET_KEY"].encode())
+
+def encrypt(text: str) -> str:
+    return get_fernet().encrypt(text.encode()).decode()
+
+def decrypt(text: str) -> str:
+    return get_fernet().decrypt(text.encode()).decode()
+
+
+
 # _defaults = {
 #     "logged_in": False,
 #     "remember_me": False,
@@ -847,14 +894,24 @@ CRED_FILE = "jira_credentials.enc"
 
 
 def save_credentials(base_url, email, token):
-    data = json.dumps({
-        "base_url": base_url,
-        "email": email,
-        "token": token
-    }).encode()
-    encrypted = fernet.encrypt(data)
-    with open(CRED_FILE, "wb") as f:
-        f.write(encrypted)
+    st.secrets["remember"] = {
+        "base_url": encrypt(base_url),
+        "email": encrypt(email),
+        "token": encrypt(token),
+    }
+
+
+
+
+# def save_credentials(base_url, email, token):
+#     data = json.dumps({
+#         "base_url": base_url,
+#         "email": email,
+#         "token": token
+#     }).encode()
+#     encrypted = fernet.encrypt(data)
+#     with open(CRED_FILE, "wb") as f:
+#         f.write(encrypted)
 
 
 def load_credentials():
@@ -1023,14 +1080,18 @@ with st.sidebar:
                 st.session_state.api_token = token
                 st.session_state.client = client
                 st.session_state.logged_in = True
-                
-
                 st.session_state.user_name = me["displayName"]  # ✅ SET
 
 
                 # -------- REMEMBER ME CODE --------
                 if remember_me:
-                    save_credentials(base_url, email, token)
+                    f = Fernet(st.secrets["FERNET_KEY"].encode())
+                    st.secrets["remember"] = {
+                        "base_url": f.encrypt(base_url.encode()).decode(),
+                        "email": f.encrypt(email.encode()).decode(),
+                        "token": f.encrypt(token.encode()).decode(),
+                    }
+
                 # -----------------------------------
 
                 # st.query_params.update({
