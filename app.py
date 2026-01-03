@@ -796,6 +796,17 @@ import json
 import os
 
 
+_defaults = {
+    "logged_in": False,
+    "remember_me": False,
+    "jira_creds": None,
+}
+
+for k, v in _defaults.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+
+
 # -------------------------------------------------
 # Remember Me (Encrypted Storage)
 # -------------------------------------------------
@@ -836,7 +847,8 @@ def clear_credentials():
 # -------------------------------------------------
 # Auto-load remembered credentials
 # -------------------------------------------------
-if not st.session_state.logged_in:
+# if not st.session_state.logged_in:
+if not st.session_state.get("logged_in"):
     saved = load_credentials()
     if saved:
         try:
@@ -864,6 +876,17 @@ for k, v in defaults.items():
 
 
 #-------------- SESSION STATE ------------
+
+# -------- REMERBER ME ------------
+
+
+if "remember_me" not in st.session_state:
+    st.session_state.remember_me = False
+
+if "jira_creds" not in st.session_state:
+    st.session_state.jira_creds = None
+
+# ----------- ENDS -------------------
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -943,7 +966,8 @@ with st.sidebar:
 with st.sidebar:
 
     # ---------------- LOGIN ----------------
-    if not st.session_state.logged_in:
+    # if not st.session_state.logged_in:
+    if not st.session_state.get("logged_in"):
         base_url = st.text_input("Jira Base URL")
         email = st.text_input("Email")
         token = st.text_input("API Token", type="password")
@@ -1050,7 +1074,8 @@ with st.sidebar:
 # -------------------------------------------------
 # Block app if not logged in
 # -------------------------------------------------
-if not st.session_state.logged_in:
+# if not st.session_state.logged_in:
+if not st.session_state.get("logged_in"):
     # Main Hero Section
     st.markdown(
         """
