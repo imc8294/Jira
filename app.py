@@ -893,8 +893,7 @@ if not st.session_state.get("logged_in", False):
             st.session_state.email = saved["email"]
             st.session_state.api_token = saved["token"]
             st.session_state.client = client
-            # st.session_state.logged_in = True
-            st.session_state.get("logged_in", False)
+            st.session_state.logged_in = True
             st.session_state.user_name = me["displayName"]
 
         except Exception:
@@ -1023,8 +1022,8 @@ with st.sidebar:
                 st.session_state.email = email
                 st.session_state.api_token = token
                 st.session_state.client = client
-                # st.session_state.logged_in = True
-                st.session_state.get("logged_in", False)
+                st.session_state.logged_in = True
+                
 
                 st.session_state.user_name = me["displayName"]  # ✅ SET
 
@@ -1191,7 +1190,8 @@ client: JiraClient = st.session_state.client
 page = st.session_state.page
 
 
-if st.session_state.logged_in:
+# if st.session_state.logged_in:
+if st.session_state.get("logged_in", False):
 
     st.markdown("""
         <style>
