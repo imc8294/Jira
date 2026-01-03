@@ -770,20 +770,50 @@ def extract_comment(comment):
 # -------------------------------------------------
 # Session defaults (SAFE)
 # -------------------------------------------------
-defaults = {
+
+
+# ===============================
+# SESSION STATE BOOTSTRAP (ONLY ONE)
+# ===============================
+SESSION_DEFAULTS = {
+    "logged_in": False,
+    "remember_me": False,
+    "jira_creds": None,
     "base_url": "",
     "email": "",
     "api_token": "",
     "client": None,
-    "logged_in": False,
+    "user_name": "",
+    "page": "Dashboard",
     "issues": [],
     "all_worklogs": None,
     "report_df": None,
-    "page": "Dashboard",
     "edit_worklog": None,
-    "delete_worklog": None
-
+    "delete_worklog": None,
+    "selected_worklog_id": None,
 }
+
+for k, v in SESSION_DEFAULTS.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
+
+
+
+
+# defaults = {
+#     "base_url": "",
+#     "email": "",
+#     "api_token": "",
+#     "client": None,
+#     "logged_in": False,
+#     "issues": [],
+#     "all_worklogs": None,
+#     "report_df": None,
+#     "page": "Dashboard",
+#     "edit_worklog": None,
+#     "delete_worklog": None
+
+# }
 
 
 # ------------------- REMEMBER ME CODE -------------------
@@ -796,15 +826,15 @@ import json
 import os
 
 
-_defaults = {
-    "logged_in": False,
-    "remember_me": False,
-    "jira_creds": None,
-}
+# _defaults = {
+#     "logged_in": False,
+#     "remember_me": False,
+#     "jira_creds": None,
+# }
 
-for k, v in _defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+# for k, v in _defaults.items():
+#     if k not in st.session_state:
+#         st.session_state[k] = v
 
 
 # -------------------------------------------------
@@ -863,16 +893,17 @@ if not st.session_state.get("logged_in"):
             st.session_state.email = saved["email"]
             st.session_state.api_token = saved["token"]
             st.session_state.client = client
-            st.session_state.logged_in = True
+            # st.session_state.logged_in = True
+            st.session_state.get("logged_in", False)
             st.session_state.user_name = me["displayName"]
 
         except Exception:
             clear_credentials()
 
 
-for k, v in defaults.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+# for k, v in defaults.items():
+#     if k not in st.session_state:
+#         st.session_state[k] = v
 
 
 #-------------- SESSION STATE ------------
@@ -880,34 +911,34 @@ for k, v in defaults.items():
 # -------- REMERBER ME ------------
 
 
-if "remember_me" not in st.session_state:
-    st.session_state.remember_me = False
+# if "remember_me" not in st.session_state:
+#     st.session_state.remember_me = False
 
-if "jira_creds" not in st.session_state:
-    st.session_state.jira_creds = None
+# if "jira_creds" not in st.session_state:
+#     st.session_state.jira_creds = None
 
-# ----------- ENDS -------------------
+# # ----------- ENDS -------------------
 
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+# if "logged_in" not in st.session_state:
+#     st.session_state.logged_in = False
 
-if "client" not in st.session_state:
-    st.session_state.client = None
+# if "client" not in st.session_state:
+#     st.session_state.client = None
 
-if "page" not in st.session_state:
-    st.session_state.page = "Dashboard"
+# if "page" not in st.session_state:
+#     st.session_state.page = "Dashboard"
 
-if "user_name" not in st.session_state:
-    st.session_state.user_name = ""
+# if "user_name" not in st.session_state:
+#     st.session_state.user_name = ""
 
-if "edit_worklog" not in st.session_state:
-    st.session_state.edit_worklog = None
+# if "edit_worklog" not in st.session_state:
+#     st.session_state.edit_worklog = None
 
-if "delete_worklog" not in st.session_state:
-    st.session_state.delete_worklog = None
+# if "delete_worklog" not in st.session_state:
+#     st.session_state.delete_worklog = None
 
-if "selected_worklog_id" not in st.session_state:
-    st.session_state.selected_worklog_id = None
+# if "selected_worklog_id" not in st.session_state:
+#     st.session_state.selected_worklog_id = None
 
 
 
@@ -992,7 +1023,9 @@ with st.sidebar:
                 st.session_state.email = email
                 st.session_state.api_token = token
                 st.session_state.client = client
-                st.session_state.logged_in = True
+                # st.session_state.logged_in = True
+                st.session_state.get("logged_in", False)
+
                 st.session_state.user_name = me["displayName"]  # ✅ SET
 
 
@@ -1200,11 +1233,21 @@ if st.session_state.logged_in:
         #     st.rerun()
 
         # ----------- REMERBER ME CODE ------------
+        # if st.button("🚪 Logout"):
+        #     clear_credentials()
+        #     for k in list(st.session_state.keys()):
+        #         del st.session_state[k]
+        #     st.rerun()
         if st.button("🚪 Logout"):
             clear_credentials()
-            for k in list(st.session_state.keys()):
-                del st.session_state[k]
+            st.session_state.update({
+                "logged_in": False,
+                "client": None,
+                "user_name": "",
+                "page": "Dashboard",
+            })
             st.rerun()
+
 
     st.divider()
 
