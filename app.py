@@ -911,34 +911,34 @@ if not st.session_state.get("logged_in", False):
 # -------- REMERBER ME ------------
 
 
-# if "remember_me" not in st.session_state:
-#     st.session_state.remember_me = False
+if "remember_me" not in st.session_state:
+    st.session_state.remember_me = False
 
-# if "jira_creds" not in st.session_state:
-#     st.session_state.jira_creds = None
+if "jira_creds" not in st.session_state:
+    st.session_state.jira_creds = None
 
-# # ----------- ENDS -------------------
+# ----------- ENDS -------------------
 
-# if "logged_in" not in st.session_state:
-#     st.session_state.logged_in = False
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-# if "client" not in st.session_state:
-#     st.session_state.client = None
+if "client" not in st.session_state:
+    st.session_state.client = None
 
-# if "page" not in st.session_state:
-#     st.session_state.page = "Dashboard"
+if "page" not in st.session_state:
+    st.session_state.page = "Dashboard"
 
-# if "user_name" not in st.session_state:
-#     st.session_state.user_name = ""
+if "user_name" not in st.session_state:
+    st.session_state.user_name = ""
 
-# if "edit_worklog" not in st.session_state:
-#     st.session_state.edit_worklog = None
+if "edit_worklog" not in st.session_state:
+    st.session_state.edit_worklog = None
 
-# if "delete_worklog" not in st.session_state:
-#     st.session_state.delete_worklog = None
+if "delete_worklog" not in st.session_state:
+    st.session_state.delete_worklog = None
 
-# if "selected_worklog_id" not in st.session_state:
-#     st.session_state.selected_worklog_id = None
+if "selected_worklog_id" not in st.session_state:
+    st.session_state.selected_worklog_id = None
 
 
 
