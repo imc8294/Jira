@@ -878,7 +878,7 @@ def clear_credentials():
 # Auto-load remembered credentials
 # -------------------------------------------------
 # if not st.session_state.logged_in:
-if not st.session_state.get("logged_in"):
+if not st.session_state.get("logged_in", False):
     saved = load_credentials()
     if saved:
         try:
@@ -998,7 +998,7 @@ with st.sidebar:
 
     # ---------------- LOGIN ----------------
     # if not st.session_state.logged_in:
-    if not st.session_state.get("logged_in"):
+    if not st.session_state.get("logged_in", False):
         base_url = st.text_input("Jira Base URL")
         email = st.text_input("Email")
         token = st.text_input("API Token", type="password")
@@ -1108,7 +1108,7 @@ with st.sidebar:
 # Block app if not logged in
 # -------------------------------------------------
 # if not st.session_state.logged_in:
-if not st.session_state.get("logged_in"):
+if not st.session_state.get("logged_in", False):
     # Main Hero Section
     st.markdown(
         """
